@@ -1,0 +1,45 @@
+# ============================================================================
+# ⚠️ 敏感配置：各运行环境的真实凭据（数据库/Redis/邮箱/加密密钥/初始管理员）
+# 一律不提交。需要新环境时复制 application-example.yaml 填写即可。
+# ============================================================================
+src/main/resources/application-dev.yaml
+src/main/resources/application-prod.yaml
+src/main/resources/application-local.yaml
+
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/

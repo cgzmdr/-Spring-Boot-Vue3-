@@ -1,0 +1,89 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.7'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.czdr'
+version = '0.0.1-SNAPSHOT'
+description = '56-app'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    set('saTokenVersion',"1.45.0")
+    set('easyQueryVersion', "3.2.1")
+}
+
+configurations {
+    all {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+        exclude group: 'org.slf4j', module: 'jul-to-slf4j'
+    }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation('org.springframework.boot:spring-boot-starter-data-redis') {
+        exclude group: 'org.springframework', module: 'spring-oxm'
+    }
+    implementation 'org.postgresql:postgresql'
+
+    implementation("com.easy-query:sql-springboot4-starter:${easyQueryVersion}") {
+        exclude group: 'com.easy-query', module: 'sql-mysql'
+        exclude group: 'com.easy-query', module: 'sql-mssql'
+        exclude group: 'com.easy-query', module: 'sql-db2'
+        exclude group: 'com.easy-query', module: 'sql-clickhouse'
+        exclude group: 'com.easy-query', module: 'sql-duckdb'
+        exclude group: 'com.easy-query', module: 'sql-kingbase-es'
+        exclude group: 'com.easy-query', module: 'sql-dameng'
+        exclude group: 'com.easy-query', module: 'sql-h2'
+        exclude group: 'com.easy-query', module: 'sql-sqlite'
+        exclude group: 'com.easy-query', module: 'sql-tsdb'
+        exclude group: 'com.easy-query', module: 'sql-oracle'
+        exclude group: 'com.easy-query', module: 'sql-gauss-db'
+    }
+    implementation "com.easy-query:sql-pgsql:${easyQueryVersion}"
+    implementation 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor "com.easy-query:sql-processor:${easyQueryVersion}"
+    implementation 'org.springframework.security:spring-security-crypto'
+    implementation "cn.dev33:sa-token-spring-boot4-starter:${saTokenVersion}"
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
+
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // Apifox Helper / Swagger 注解（仅编译期，用于生成 API 文档）
+    compileOnly 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.27'
+}
+
+// ============================================================================
+// 静态资源外置：打包时不在 bootJar 中打入 static，而是复制到 jar 同级 static 目录。
+// 开发环境仍通过 processResources 输出到 build/resources/main，可正常访问。
+// 生产环境请将 build/libs/static 与 jar 放在同一目录（或通过 app.static-location 指定）。
+// ============================================================================
+tasks.register('copyStaticResources', Copy) {
+    from('src/main/resources/static')
+    into(layout.buildDirectory.dir('libs/static'))
+}
+
+tasks.named('bootJar') {
+    dependsOn 'copyStaticResources'
+    // bootJar 不打包 static，避免 jar 体积过大；生产静态资源由外部目录提供。
+    exclude('static/**')
+}
+
+// plain jar 同样不打包 static，保持两种 jar 产物行为一致。
+tasks.named('jar') {
+    exclude('static/**')
+}

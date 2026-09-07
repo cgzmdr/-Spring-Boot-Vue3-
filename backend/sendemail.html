@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>邮箱验证码</title>
+    <!--
+      模板变量：
+      {{code}}          6 位验证码
+      {{expireMinutes}} 有效期（分钟）
+      {{year}}          当前年份
+    -->
+</head>
+<body style="margin:0; padding:0; background-color:#F2F0E9; font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif; color:#141414; -webkit-font-smoothing:antialiased;">
+
+<!-- 外层背景 -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F2F0E9;">
+    <tr>
+        <td align="center" style="padding:32px 12px;">
+
+            <!-- 内容容器 600px -->
+            <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px; width:100%; background-color:#FAF9F5; border:1px solid #D9D8D1;">
+
+                <!-- 顶部品牌条 -->
+                <tr>
+                    <td style="background-color:#B6402E; height:4px; line-height:4px; font-size:0;">&nbsp;</td>
+                </tr>
+
+                <!-- 报头 -->
+                <tr>
+                    <td style="padding:28px 40px 20px 40px; border-bottom:1px solid #D9D8D1;">
+                        <span style="font-family:Georgia,'Songti SC','STSong',serif; font-size:20px; color:#141414; letter-spacing:1px;">走进多彩 56 个民族世界</span>
+                    </td>
+                </tr>
+
+                <!-- 正文 -->
+                <tr>
+                    <td style="padding:32px 40px 40px 40px;">
+
+                        <p style="margin:0 0 8px 0; font-family:Georgia,'Songti SC',serif; font-size:24px; color:#141414; letter-spacing:1px;">邮箱验证码</p>
+                        <p style="margin:0 0 24px 0; font-size:14px; line-height:1.7; color:#6B6B66;">您好，您正在请求登录或找回密码，本次验证码如下（请勿泄露给他人）：</p>
+
+                        <!-- 验证码 -->
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px 0;">
+                            <tr>
+                                <td style="padding:16px 28px; background-color:#FFFFFF; border:1px solid #D9D8D1;">
+                                    <span style="font-family:Georgia,'Songti SC',serif; font-size:36px; font-weight:bold; color:#B6402E; letter-spacing:10px;" id="code">{{code}}</span>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <p style="margin:0 0 24px 0; font-size:14px; line-height:1.7; color:#141414;">验证码 <strong style="color:#B6402E;">10 分钟</strong> 内有效，请尽快完成验证。</p>
+
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #D9D8D1; padding-top:24px;">
+                            <tr>
+                                <td style="font-size:13px; line-height:1.7; color:#6B6B66;">
+                                    如果不是您本人操作，请忽略本邮件，无需回复。如有疑问请联系我们。
+                                </td>
+                            </tr>
+                        </table>
+
+                    </td>
+                </tr>
+
+                <!-- 页脚 -->
+                <tr>
+                    <td style="padding:24px 40px 32px 40px; background-color:#F2F0E9; border-top:1px solid #D9D8D1;">
+                        <p style="margin:0 0 8px 0; font-family:Georgia,'Songti SC',serif; font-size:14px; color:#141414;">走进多彩 56 个民族世界</p>
+                        <p style="margin:0; font-size:12px; line-height:1.6; color:#6B6B66;">传承多彩文化 · 促进民族团结 · 本邮件由系统自动发送，请勿直接回复。</p>
+                        <p style="margin:12px 0 0 0; font-size:12px; color:#6B6B66;">© 2026 走进多彩 56 个民族世界</p>
+                    </td>
+                </tr>
+
+            </table>
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

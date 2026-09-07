@@ -1,0 +1,77 @@
+# ============================================================================
+# 基础配置（通用、无敏感信息，随仓库发布）
+# ----------------------------------------------------------------------------
+# 敏感信息（数据库/Redis/邮箱/加密密钥/初始管理员）一律不写在这里，
+# 而是放入各运行环境的配置文件，且这些文件已被 .gitignore 忽略、不会上传：
+#   - application-dev.yaml  本地开发
+#   - application-prod.yaml 生产部署
+# 新环境请复制 src/main/resources/application-example.yaml 并按注释填写真实值。
+# 也可通过环境变量注入（格式 ${ENV_NAME:默认值}）。
+# ============================================================================
+
+spring:
+  mail:
+    host: smtp.qq.com
+    port: 465
+    # 发件邮箱账号 / SMTP 授权码（真实值见 application-dev.yaml / application-prod.yaml）
+    username: ${MAIL_USERNAME:your-mail@example.com}
+    password: ${MAIL_PASSWORD:your-smtp-authorization-code}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+  datasource:
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 60000
+      max-lifetime: 180000
+      data-source-properties:
+        reWriteBatchedInserts: true
+        prepareThreshold: 3
+        preferQueryMode: extended
+        tcpKeepAlive: true
+        socketTimeout: 10
+        connectTimeout: 5
+  main:
+    lazy-initialization: true
+    banner-mode: off
+  threads:
+    virtual:
+      enabled: true
+  profiles:
+    active: dev
+  application:
+    name: 56-app
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+easy-query:
+  database: PGSQL
+  allow-delete-statement: true
+server:
+  port: 20256
+sa-token:
+  token-name: satoken
+  is-read-header: true
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+app:
+  crypto:
+    # 敏感字段（用户密码、密保答案等）的 AES 加密密钥。
+    # 此处仅为可启动的占位值 —— 生产环境务必用强随机密钥覆盖；
+    # 已上线数据请保持密钥不变（否则历史数据无法解密），真实值见
+    # application-dev.yaml / application-prod.yaml（已被 git 忽略）。
+    aes-key: ${APP_AES_KEY:0123456789abcdef}
+    aes-iv: ${APP_AES_IV:fedcba9876543210}
+  admin:
+    # 首次启动时由 RbacDataInitializer 自动创建的超级管理员账号
+    account: ${APP_ADMIN_ACCOUNT:admin@example.com}
+    password: ${APP_ADMIN_PASSWORD:Admin12345@}

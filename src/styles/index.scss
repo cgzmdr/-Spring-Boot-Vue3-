@@ -1,0 +1,10 @@
+// Element Plus 品牌色覆盖
+:root {
+	--el-color-primary: #{$brand-color};
+	--el-color-primary-light-3: #{lighten($brand-color, 12%)};
+	--el-color-primary-light-5: #{lighten($brand-color, 20%)};
+	--el-color-primary-light-7: #{lighten($brand-color, 30%)};
+	--el-color-primary-light-8: #{lighten($brand-color, 35%)};
+	--el-color-primary-light-9: #{lighten($brand-color, 42%)};
+	--el-color-primary-dark-2: #{$brand-dark};
+}
