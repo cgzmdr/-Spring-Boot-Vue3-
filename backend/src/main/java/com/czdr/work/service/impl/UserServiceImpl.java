@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -112,6 +113,9 @@ public class UserServiceImpl implements UserService {
         if ("disabled".equals(userAuth.getStatus())) {
             throw new BusinessException(ErrorCode.ACCOUNT_DISABLED, "账号已被禁用");
         }
+        // 记录活跃时间：后台公告的「活跃用户」受众依赖该字段
+        userAuth.setLastActiveAt(LocalDateTime.now());
+        entityQuery.updatable(userAuth).executeRows();
         return userAuth.getId().toString();
     }
 

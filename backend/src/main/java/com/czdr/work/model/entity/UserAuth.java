@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,6 +38,24 @@ public class UserAuth implements ProxyEntityAvailable<UserAuth,UserAuthProxy> {
     public String securityQuestion;
     /** 密保答案（AES 加密存储） */
     public String securityAnswer;
+    /** 社区个人简介 */
+    public String bio;
+    /** 常用语言/地区偏好（zh / en ...） */
+    public String locale;
+    /** 时区（如 Asia/Shanghai），用于相对时间与"今天"的边界判断 */
+    public String timezone;
+    /** 个人主页 */
+    public String website;
+    /** 最近活跃时间 */
+    public LocalDateTime lastActiveAt;
+    /** 禁言截止时间（社区发言限制，为空表示未禁言） */
+    public LocalDateTime mutedUntil;
+    /** 封禁截止时间（为空表示未封禁） */
+    public LocalDateTime bannedUntil;
+    /** 信任等级：0 新用户 / 1 正常 / 2 活跃（用于发帖策略与陌生人私信） */
+    public Integer trustLevel;
+    /** 是否允许陌生人私信（默认否：仅互相关注可私信） */
+    public Boolean allowStrangerMessage;
     public LocalDate createdAt;
     public LocalDate updatedAt;
 

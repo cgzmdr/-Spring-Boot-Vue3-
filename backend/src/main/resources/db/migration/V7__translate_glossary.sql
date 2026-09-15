@@ -1,0 +1,201 @@
+-- ============================================================================
+-- V7 · 翻译词表入库（原 classpath:translate/glossary-zh-en.tsv 迁到数据库，可在后台维护）
+--   词表是 glossary 提供方（本地零依赖兜底）的数据源：
+--   · 按「术语 + 目标语言」命中，最长匹配优先；
+--   · 反向翻译（如 en -> zh）自动由正向词条推导，无需重复维护；
+--   · 后台改动后 60 秒内自动生效（或立即刷新缓存）。
+-- 幂等脚本，可重复执行。
+-- 应用方式：psql -h localhost -U postgres -d 56_app -f V7__translate_glossary.sql
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS translate_glossary (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    -- 源语言与目标语言（如 zh -> en）；同一对语言内 term 唯一
+    source_locale varchar(8)   NOT NULL DEFAULT 'zh',
+    target_locale varchar(8)   NOT NULL DEFAULT 'en',
+    term          varchar(128) NOT NULL,
+    translation   varchar(256) NOT NULL,
+    enabled       boolean      NOT NULL DEFAULT true,
+    remark        varchar(200),
+    created_at    timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at    timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT translate_glossary_unique UNIQUE (source_locale, target_locale, term)
+);
+CREATE INDEX IF NOT EXISTS idx_glossary_target ON translate_glossary (target_locale, enabled);
+CREATE INDEX IF NOT EXISTS idx_glossary_source ON translate_glossary (source_locale, enabled);
+
+-- updated_at 自动维护（复用库中已存在的 set_updated_at() 函数）
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'set_updated_at') THEN
+        DROP TRIGGER IF EXISTS trg_translate_glossary_updated ON translate_glossary;
+        CREATE TRIGGER trg_translate_glossary_updated BEFORE UPDATE ON translate_glossary
+            FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+    END IF;
+END $$;
+
+-- ---------------------------------------------------------------------------
+-- 种子数据：内置文化词表（民族名 / 节日 / 非遗 / 美食术语），zh -> en
+-- 来自原 classpath:translate/glossary-zh-en.tsv，共 154 条；后台可继续增删
+-- ---------------------------------------------------------------------------
+INSERT INTO translate_glossary (source_locale, target_locale, term, translation, remark)
+VALUES
+    ('zh', 'en', '汉族', 'Han', '内置词表'),
+    ('zh', 'en', '蒙古族', 'Mongolian', '内置词表'),
+    ('zh', 'en', '回族', 'Hui', '内置词表'),
+    ('zh', 'en', '藏族', 'Tibetan', '内置词表'),
+    ('zh', 'en', '维吾尔族', 'Uyghur', '内置词表'),
+    ('zh', 'en', '苗族', 'Miao', '内置词表'),
+    ('zh', 'en', '彝族', 'Yi', '内置词表'),
+    ('zh', 'en', '壮族', 'Zhuang', '内置词表'),
+    ('zh', 'en', '布依族', 'Bouyei', '内置词表'),
+    ('zh', 'en', '朝鲜族', 'Korean', '内置词表'),
+    ('zh', 'en', '满族', 'Manchu', '内置词表'),
+    ('zh', 'en', '侗族', 'Dong', '内置词表'),
+    ('zh', 'en', '瑶族', 'Yao', '内置词表'),
+    ('zh', 'en', '白族', 'Bai', '内置词表'),
+    ('zh', 'en', '土家族', 'Tujia', '内置词表'),
+    ('zh', 'en', '哈尼族', 'Hani', '内置词表'),
+    ('zh', 'en', '哈萨克族', 'Kazakh', '内置词表'),
+    ('zh', 'en', '傣族', 'Dai', '内置词表'),
+    ('zh', 'en', '黎族', 'Li', '内置词表'),
+    ('zh', 'en', '傈僳族', 'Lisu', '内置词表'),
+    ('zh', 'en', '佤族', 'Wa', '内置词表'),
+    ('zh', 'en', '畲族', 'She', '内置词表'),
+    ('zh', 'en', '高山族', 'Gaoshan', '内置词表'),
+    ('zh', 'en', '拉祜族', 'Lahu', '内置词表'),
+    ('zh', 'en', '水族', 'Shui', '内置词表'),
+    ('zh', 'en', '东乡族', 'Dongxiang', '内置词表'),
+    ('zh', 'en', '纳西族', 'Naxi', '内置词表'),
+    ('zh', 'en', '景颇族', 'Jingpo', '内置词表'),
+    ('zh', 'en', '柯尔克孜族', 'Kyrgyz', '内置词表'),
+    ('zh', 'en', '土族', 'Tu', '内置词表'),
+    ('zh', 'en', '达斡尔族', 'Daur', '内置词表'),
+    ('zh', 'en', '仫佬族', 'Mulao', '内置词表'),
+    ('zh', 'en', '羌族', 'Qiang', '内置词表'),
+    ('zh', 'en', '布朗族', 'Blang', '内置词表'),
+    ('zh', 'en', '撒拉族', 'Salar', '内置词表'),
+    ('zh', 'en', '毛南族', 'Maonan', '内置词表'),
+    ('zh', 'en', '仡佬族', 'Gelao', '内置词表'),
+    ('zh', 'en', '锡伯族', 'Xibe', '内置词表'),
+    ('zh', 'en', '阿昌族', 'Achang', '内置词表'),
+    ('zh', 'en', '普米族', 'Pumi', '内置词表'),
+    ('zh', 'en', '塔吉克族', 'Tajik', '内置词表'),
+    ('zh', 'en', '怒族', 'Nu', '内置词表'),
+    ('zh', 'en', '乌孜别克族', 'Uzbek', '内置词表'),
+    ('zh', 'en', '俄罗斯族', 'Russian', '内置词表'),
+    ('zh', 'en', '鄂温克族', 'Evenki', '内置词表'),
+    ('zh', 'en', '德昂族', 'De''ang', '内置词表'),
+    ('zh', 'en', '保安族', 'Bonan', '内置词表'),
+    ('zh', 'en', '裕固族', 'Yugur', '内置词表'),
+    ('zh', 'en', '京族', 'Gin', '内置词表'),
+    ('zh', 'en', '塔塔尔族', 'Tatar', '内置词表'),
+    ('zh', 'en', '独龙族', 'Derung', '内置词表'),
+    ('zh', 'en', '鄂伦春族', 'Oroqen', '内置词表'),
+    ('zh', 'en', '赫哲族', 'Hezhen', '内置词表'),
+    ('zh', 'en', '门巴族', 'Monba', '内置词表'),
+    ('zh', 'en', '珞巴族', 'Lhoba', '内置词表'),
+    ('zh', 'en', '基诺族', 'Jino', '内置词表'),
+    ('zh', 'en', '中华民族', 'Chinese nation', '内置词表'),
+    ('zh', 'en', '少数民族', 'ethnic minority', '内置词表'),
+    ('zh', 'en', '民族', 'ethnic group', '内置词表'),
+    ('zh', 'en', '那达慕', 'Nadam', '内置词表'),
+    ('zh', 'en', '那达慕大会', 'Nadam Fair', '内置词表'),
+    ('zh', 'en', '泼水节', 'Water Splashing Festival', '内置词表'),
+    ('zh', 'en', '火把节', 'Torch Festival', '内置词表'),
+    ('zh', 'en', '三月街', 'Third Month Fair', '内置词表'),
+    ('zh', 'en', '雪顿节', 'Shoton Festival', '内置词表'),
+    ('zh', 'en', '望果节', 'Harvest Festival', '内置词表'),
+    ('zh', 'en', '古尔邦节', 'Eid al-Adha', '内置词表'),
+    ('zh', 'en', '开斋节', 'Eid al-Fitr', '内置词表'),
+    ('zh', 'en', '肉孜节', 'Eid al-Fitr', '内置词表'),
+    ('zh', 'en', '藏历新年', 'Tibetan New Year', '内置词表'),
+    ('zh', 'en', '苗年', 'Miao New Year', '内置词表'),
+    ('zh', 'en', '花山节', 'Huashan Festival', '内置词表'),
+    ('zh', 'en', '芦笙节', 'Lusheng Festival', '内置词表'),
+    ('zh', 'en', '姊妹节', 'Sister Festival', '内置词表'),
+    ('zh', 'en', '端午节', 'Dragon Boat Festival', '内置词表'),
+    ('zh', 'en', '春节', 'Spring Festival', '内置词表'),
+    ('zh', 'en', '中秋节', 'Mid-Autumn Festival', '内置词表'),
+    ('zh', 'en', '非物质文化遗产', 'intangible cultural heritage', '内置词表'),
+    ('zh', 'en', '非遗', 'intangible cultural heritage', '内置词表'),
+    ('zh', 'en', '十二木卡姆', 'Twelve Muqam', '内置词表'),
+    ('zh', 'en', '木卡姆', 'Muqam', '内置词表'),
+    ('zh', 'en', '长调', 'long song', '内置词表'),
+    ('zh', 'en', '呼麦', 'throat singing', '内置词表'),
+    ('zh', 'en', '马头琴', 'morin khuur', '内置词表'),
+    ('zh', 'en', '冬不拉', 'dombra', '内置词表'),
+    ('zh', 'en', '热瓦普', 'rawap', '内置词表'),
+    ('zh', 'en', '芦笙', 'lusheng', '内置词表'),
+    ('zh', 'en', '侗族大歌', 'Dong grand song', '内置词表'),
+    ('zh', 'en', '大歌', 'grand song', '内置词表'),
+    ('zh', 'en', '花儿', 'Hua''er', '内置词表'),
+    ('zh', 'en', '山歌', 'folk song', '内置词表'),
+    ('zh', 'en', '锅庄', 'Guozhuang dance', '内置词表'),
+    ('zh', 'en', '弦子', 'Xianzi', '内置词表'),
+    ('zh', 'en', '象脚鼓', 'elephant-foot drum', '内置词表'),
+    ('zh', 'en', '铜鼓', 'bronze drum', '内置词表'),
+    ('zh', 'en', '苗绣', 'Miao embroidery', '内置词表'),
+    ('zh', 'en', '苏绣', 'Suzhou embroidery', '内置词表'),
+    ('zh', 'en', '蜡染', 'batik', '内置词表'),
+    ('zh', 'en', '扎染', 'tie-dye', '内置词表'),
+    ('zh', 'en', '银饰', 'silver ornament', '内置词表'),
+    ('zh', 'en', '刺绣', 'embroidery', '内置词表'),
+    ('zh', 'en', '织锦', 'brocade', '内置词表'),
+    ('zh', 'en', '壮锦', 'Zhuang brocade', '内置词表'),
+    ('zh', 'en', '土家织锦', 'Tujia brocade', '内置词表'),
+    ('zh', 'en', '藏戏', 'Tibetan opera', '内置词表'),
+    ('zh', 'en', '傩戏', 'Nuo opera', '内置词表'),
+    ('zh', 'en', '京剧', 'Peking opera', '内置词表'),
+    ('zh', 'en', '皮影戏', 'shadow puppetry', '内置词表'),
+    ('zh', 'en', '唐卡', 'thangka', '内置词表'),
+    ('zh', 'en', '史诗', 'epic', '内置词表'),
+    ('zh', 'en', '格萨尔', 'Gesar', '内置词表'),
+    ('zh', 'en', '江格尔', 'Jangar', '内置词表'),
+    ('zh', 'en', '玛纳斯', 'Manas', '内置词表'),
+    ('zh', 'en', '蒙古包', 'yurt', '内置词表'),
+    ('zh', 'en', '毡房', 'yurt', '内置词表'),
+    ('zh', 'en', '哈达', 'khata', '内置词表'),
+    ('zh', 'en', '糌粑', 'tsampa', '内置词表'),
+    ('zh', 'en', '青稞酒', 'highland barley wine', '内置词表'),
+    ('zh', 'en', '酥油茶', 'butter tea', '内置词表'),
+    ('zh', 'en', '奶茶', 'milk tea', '内置词表'),
+    ('zh', 'en', '马奶酒', 'kumis', '内置词表'),
+    ('zh', 'en', '手抓饭', 'pilaf', '内置词表'),
+    ('zh', 'en', '烤全羊', 'roast whole lamb', '内置词表'),
+    ('zh', 'en', '馕', 'naan', '内置词表'),
+    ('zh', 'en', '抓饭', 'pilaf', '内置词表'),
+    ('zh', 'en', '酸汤鱼', 'sour fish soup', '内置词表'),
+    ('zh', 'en', '米粉', 'rice noodles', '内置词表'),
+    ('zh', 'en', '长桌宴', 'long-table banquet', '内置词表'),
+    ('zh', 'en', '吊脚楼', 'stilted house', '内置词表'),
+    ('zh', 'en', '鼓楼', 'drum tower', '内置词表'),
+    ('zh', 'en', '风雨桥', 'wind-rain bridge', '内置词表'),
+    ('zh', 'en', '村寨', 'village', '内置词表'),
+    ('zh', 'en', '牧场', 'pasture', '内置词表'),
+    ('zh', 'en', '高原', 'plateau', '内置词表'),
+    ('zh', 'en', '草原', 'grassland', '内置词表'),
+    ('zh', 'en', '沙漠', 'desert', '内置词表'),
+    ('zh', 'en', '梯田', 'terraced field', '内置词表'),
+    ('zh', 'en', '文化', 'culture', '内置词表'),
+    ('zh', 'en', '历史', 'history', '内置词表'),
+    ('zh', 'en', '传统', 'traditional', '内置词表'),
+    ('zh', 'en', '习俗', 'custom', '内置词表'),
+    ('zh', 'en', '服饰', 'costume', '内置词表'),
+    ('zh', 'en', '语言', 'language', '内置词表'),
+    ('zh', 'en', '文字', 'script', '内置词表'),
+    ('zh', 'en', '音乐', 'music', '内置词表'),
+    ('zh', 'en', '舞蹈', 'dance', '内置词表'),
+    ('zh', 'en', '美食', 'cuisine', '内置词表'),
+    ('zh', 'en', '建筑', 'architecture', '内置词表'),
+    ('zh', 'en', '信仰', 'belief', '内置词表'),
+    ('zh', 'en', '迁徙', 'migration', '内置词表'),
+    ('zh', 'en', '部落', 'tribe', '内置词表'),
+    ('zh', 'en', '祖先', 'ancestor', '内置词表'),
+    ('zh', 'en', '欢迎', 'welcome', '内置词表'),
+    ('zh', 'en', '谢谢', 'thank you', '内置词表')
+ON CONFLICT (source_locale, target_locale, term) DO NOTHING;
+
+-- 校验：
+-- SELECT target_locale, count(*) FROM translate_glossary GROUP BY 1;
+-- SELECT term, translation FROM translate_glossary WHERE term = '蒙古族';

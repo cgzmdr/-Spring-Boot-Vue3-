@@ -15,9 +15,40 @@ const messages: Record<Lang, Record<string, string>> = {
 		search: "搜索",
 		nav_home: "首页",
 		nav_ethnic: "民族",
+		nav_culture: "文化",
+		nav_ethnic_all: "民族概览",
+		nav_ethnic_all_desc: "56 个民族的卡片墙与筛选",
+		nav_languages: "语文",
+		nav_languages_desc: "语系、语言与传统文字",
+		nav_costume: "服饰",
+		nav_costume_desc: "各民族的衣着与工艺",
+		nav_dwelling: "民居",
+		nav_dwelling_desc: "干栏式、穹庐式等建筑形制",
+		nav_map: "分布地图",
+		nav_map_desc: "聚居地地理分布",
+		nav_autonomous: "自治地方",
+		nav_autonomous_desc: "自治区 / 自治州 / 自治县",
 		nav_festival: "节日",
+		nav_festival_all: "节日列表",
+		nav_festival_all_desc: "按类型与民族浏览",
+		nav_calendar: "日历",
+		nav_calendar_desc: "农历换算与今日节日",
 		nav_art: "艺术",
+		nav_art_desc: "音乐、舞蹈、戏剧与手工艺",
+		nav_heritage: "非遗",
+		nav_heritage_desc: "非物质文化遗产名录",
+		nav_persons: "人物",
+		nav_persons_desc: "传承人与文化名家",
+		nav_sports: "体育",
+		nav_sports_desc: "民族传统体育项目",
+		nav_discussion: "讨论",
+		nav_interests: "兴趣推荐",
+		nav_interests_desc: "选择兴趣，获得个性化推荐",
 		nav_about: "关于",
+		/** 英文正文为机器翻译时的提示（方向 C-3） */
+		mt_notice: "本页英文由机器翻译生成，仅供参考",
+		mt_reviewed: "本页英文已经人工校对",
+		read_zh: "阅读中文原文",
 		login: "登录",
 		register: "注册",
 		logout: "退出登录",
@@ -53,9 +84,40 @@ const messages: Record<Lang, Record<string, string>> = {
 		search: "Search",
 		nav_home: "Home",
 		nav_ethnic: "Ethnic",
+		nav_culture: "Culture",
+		nav_ethnic_all: "Overview",
+		nav_ethnic_all_desc: "Browse all 56 groups",
+		nav_languages: "Languages",
+		nav_languages_desc: "Families, languages, scripts",
+		nav_costume: "Costumes",
+		nav_costume_desc: "Dress and textile crafts",
+		nav_dwelling: "Dwellings",
+		nav_dwelling_desc: "Stilt, yurt and other forms",
+		nav_map: "Map",
+		nav_map_desc: "Geographic distribution",
+		nav_autonomous: "Regions",
+		nav_autonomous_desc: "Regions, prefectures, counties",
 		nav_festival: "Festival",
+		nav_festival_all: "All festivals",
+		nav_festival_all_desc: "Browse by type and group",
+		nav_calendar: "Calendar",
+		nav_calendar_desc: "Lunar conversion & today",
 		nav_art: "Art",
+		nav_art_desc: "Music, dance, drama, crafts",
+		nav_heritage: "Heritage",
+		nav_heritage_desc: "Intangible cultural heritage",
+		nav_persons: "People",
+		nav_persons_desc: "Inheritors and masters",
+		nav_sports: "Sports",
+		nav_sports_desc: "Traditional ethnic sports",
+		nav_discussion: "Community",
+		nav_interests: "For You",
+		nav_interests_desc: "Pick interests for personalized picks",
 		nav_about: "About",
+		/** 英文正文为机器翻译时的提示（方向 C-3） */
+		mt_notice: "English text on this page is machine-translated and provided for reference only.",
+		mt_reviewed: "The English text on this page has been reviewed.",
+		read_zh: "Read the original Chinese",
 		login: "Sign in",
 		register: "Sign up",
 		logout: "Sign out",
@@ -91,6 +153,20 @@ export const useLangStore = defineStore("lang", () => {
 	const lang = ref<Lang>((localStorage.getItem(STORAGE_KEY) as Lang) || "zh");
 
 	const isEn = computed(() => lang.value === "en");
+
+	/**
+	 * 启动时把初始语言同步到 <html lang>。
+	 *
+	 * 之前只在 apply()（切换语言）里同步，刷新页面后 store 虽从 storage 恢复了语言，
+	 * 但 documentElement.lang 一直是初始的 zh-CN——既影响无障碍朗读与搜索引擎判断语种，
+	 * 也让「当前是否为英文」在不同地方出现不一致的判据。
+	 */
+	function syncDocumentLang() {
+		if (typeof document !== "undefined") {
+			document.documentElement.lang = lang.value === "en" ? "en" : "zh-CN";
+		}
+	}
+	syncDocumentLang();
 
 	function apply(l: Lang, persistToServer: boolean) {
 		lang.value = l;

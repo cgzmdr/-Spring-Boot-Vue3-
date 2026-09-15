@@ -20,6 +20,8 @@ public class ArtConvert {
                 entity.getCategory(),
                 entity.getEthnicGroup() != null ? entity.getEthnicGroup().getName() : null,
                 entity.getDescription(),
+                entity.getDescriptionEn(),
+                entity.getDescriptionEnSource(),
                 entity.getOrigin(),
                 entity.getIntangibleHeritage(),
                 JsonUtil.toStringArray(entity.getInheritors()),

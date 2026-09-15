@@ -188,6 +188,34 @@ public class RbacDataInitializer implements ApplicationRunner {
         map.put("content:like", "点赞");
         map.put("content:favorite", "收藏");
         map.put("share:create", "分享");
+        // 讨论区（社区）
+        map.put("discussion:review", "讨论区审核与举报处理");
+        map.put("discussion:user:mute", "讨论区用户禁言");
+        map.put("discussion:board", "讨论区板块管理");
+        // 站内公告（OA 群发）与翻译词表
+        map.put("system:broadcast", "站内公告群发");
+        map.put("translate:glossary", "翻译词表维护");
+        // B 系列新增内容：人物档案 / 自治地方 / 传统体育（按业务域归入「内容运营」）
+        map.put("person:list", "人物档案列表");
+        map.put("person:create", "新增人物档案");
+        map.put("person:update", "编辑人物档案");
+        map.put("person:delete", "删除人物档案");
+        map.put("area:list", "自治地方列表");
+        map.put("area:create", "新增自治地方");
+        map.put("area:update", "编辑自治地方");
+        map.put("area:delete", "删除自治地方");
+        map.put("sport:list", "传统体育列表");
+        map.put("sport:create", "新增传统体育项目");
+        map.put("sport:update", "编辑传统体育项目");
+        map.put("sport:delete", "删除传统体育项目");
+        // 方向 C：内容来源（可溯源）
+        map.put("source:list", "内容来源列表");
+        map.put("source:create", "新增内容来源");
+        map.put("source:update", "编辑内容来源");
+        map.put("source:delete", "删除内容来源");
+        // 方向 C-4：图片版权署名
+        map.put("credit:list", "图片署名列表");
+        map.put("credit:update", "核实/编辑图片署名");
         return map;
     }
 
@@ -209,14 +237,25 @@ public class RbacDataInitializer implements ApplicationRunner {
                 "ethnic:create", "ethnic:update", "ethnic:delete", "ethnic:list", "ethnic:view",
                 "festival:create", "festival:update", "festival:delete", "festival:list",
                 "art:create", "art:update", "art:delete", "art:list",
+                "translate:glossary",
                 "topic:create", "topic:update", "topic:delete", "topic:list",
-                "form:create", "form:update", "form:delete", "form:list"));
+                "form:create", "form:update", "form:delete", "form:list",
+                "person:list", "person:create", "person:update", "person:delete",
+                "area:list", "area:create", "area:update", "area:delete",
+                "sport:list", "sport:create", "sport:update", "sport:delete",
+                "source:list", "source:create", "source:update", "source:delete",
+                "credit:list", "credit:update"));
         map.put("editor", List.of(
                 "ethnic:create", "ethnic:update",
                 "festival:create", "festival:update",
-                "art:create", "art:update"));
-        map.put("reviewer", List.of("review:list", "review:approve", "review:reject"));
-        map.put("operator", List.of("topic:update", "search:hot:update", "stats:view"));
+                "art:create", "art:update",
+                "person:list", "person:update",
+                "area:list", "area:update",
+                "sport:list", "sport:update",
+                "source:list", "source:update",
+                "credit:list", "credit:update"));
+        map.put("reviewer", List.of("review:list", "review:approve", "review:reject", "discussion:review"));
+        map.put("operator", List.of("topic:update", "search:hot:update", "stats:view", "discussion:review"));
         map.put("user", List.of("content:like", "content:favorite", "share:create"));
         return map;
     }

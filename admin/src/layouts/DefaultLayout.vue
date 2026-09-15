@@ -18,6 +18,7 @@
 			</div>
 			<el-menu
 				:default-active="activeMenu"
+				:default-openeds="defaultOpeneds"
 				:collapse="isCollapse"
 				:collapse-transition="false"
 				router
@@ -25,14 +26,25 @@
 				text-color="#cbd5e1"
 				active-text-color="#ffffff"
 			>
-				<el-menu-item
-					v-for="item in menus"
-					:key="item.path"
-					:index="item.path"
+				<!-- 按业务域分组：一级为分组标题，二级为具体功能 -->
+				<el-sub-menu
+					v-for="g in menus"
+					:key="g.key"
+					:index="g.key"
 				>
-					<el-icon><component :is="item.icon" /></el-icon>
-					<template #title>{{ item.title }}</template>
-				</el-menu-item>
+					<template #title>
+						<el-icon><component :is="g.icon" /></el-icon>
+						<span>{{ g.title }}</span>
+					</template>
+					<el-menu-item
+						v-for="item in g.children"
+						:key="item.path"
+						:index="item.path"
+					>
+						<el-icon><component :is="item.icon" /></el-icon>
+						<template #title>{{ item.title }}</template>
+					</el-menu-item>
+				</el-sub-menu>
 			</el-menu>
 		</el-aside>
 
@@ -103,7 +115,7 @@ import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import { useUserStore } from "@/stores/user";
-import { MENU_CONFIG, ROLE_LABEL } from "@/constants";
+import { MENU_GROUPS, ROLE_LABEL } from "@/constants";
 
 const route = useRoute();
 const router = useRouter();
@@ -111,12 +123,29 @@ const userStore = useUserStore();
 
 const isCollapse = ref(false);
 
-const menus = computed(() => {
-	if (userStore.hasRole("super_admin")) return MENU_CONFIG;
-	return MENU_CONFIG.filter(
-		(m) =>
-			m.roles.length === 0 || m.roles.some((r) => userStore.roles.includes(r)),
+/**
+ * 可见菜单：分组与分组内条目都按角色过滤。
+ * 过滤后没有可见条目的分组整体隐藏，避免出现空分组。
+ */
+const menus = computed(() =>
+	MENU_GROUPS.map((g) => ({
+		...g,
+		children: g.children.filter(
+			(item) => item.roles.length === 0 || item.roles.some((r) => userStore.roles.includes(r)),
+		),
+	})).filter(
+		(g) =>
+			g.children.length > 0 &&
+			(g.roles.length === 0 || g.roles.some((r) => userStore.roles.includes(r))),
+	),
+);
+
+/** 默认展开当前路由所属的分组，其余保持收起 */
+const defaultOpeneds = computed(() => {
+	const current = menus.value.find((g) =>
+		g.children.some((item) => route.path.startsWith(item.path)),
 	);
+	return current ? [current.key] : [menus.value[0]?.key].filter(Boolean);
 });
 
 const activeMenu = computed(() => route.path);

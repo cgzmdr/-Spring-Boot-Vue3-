@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 
 import App from "./App.vue";
 import router from "./router";
+import { setupMotion } from "./plugins/motion";
 
 import "./styles/common.css";
 // Element Plus 函数式组件（ElMessage）样式按需引入
@@ -12,6 +13,8 @@ const app = createApp(App);
 
 app.use(createPinia());
 app.use(router);
+// 全站动效（@vueuse/motion + @formkit/auto-animate）
+setupMotion(app);
 
 // 应用持久化的页面字号设置（在挂载前生效，避免闪烁）
 import { useSettingsStore } from "./stores/settings";

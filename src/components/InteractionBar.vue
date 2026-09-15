@@ -5,7 +5,7 @@ import { interactionApi, shareApi } from "@/api/modules";
 import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps<{
-	type: "ethnic" | "festival" | "art" | "topic";
+	type: "ethnic" | "festival" | "art" | "topic" | "food" | "discussion_topic" | "discussion_post";
 	id: string;
 }>();
 

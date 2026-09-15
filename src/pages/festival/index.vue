@@ -73,6 +73,8 @@ onMounted(load)
           {{ t.label }}
         </button>
         <button v-if="typeFilter" class="chip" @click="pickType(typeFilter)">✕ 清除</button>
+        <span style="flex: 1"></span>
+        <router-link class="chip cal-entry" to="/festival/calendar">📅 按日历浏览</router-link>
       </div>
     </div>
 
@@ -103,3 +105,17 @@ onMounted(load)
     <el-empty v-else description="暂无节日数据" style="padding: 48px 0" />
   </div>
 </template>
+
+<style scoped>
+/* 日历入口：与筛选 chip 同形，但作为链接可点击跳转 */
+.cal-entry {
+  text-decoration: none;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.cal-entry:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+</style>

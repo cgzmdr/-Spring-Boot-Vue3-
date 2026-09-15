@@ -11,23 +11,37 @@ type NavLike = {
 
 /**
  * 根据内容类型跳转到对应详情页（收藏 / 搜索结果 / 专题条目共用）。
- * 用 switch 保证类型安全，避免动态字符串路由。
  */
-export function navigateByContentType(navigation: NavLike, type: string, id?: string) {
-  if (!id) return
+export function navigateByContentType(navigation: NavLike, type: string, id?: string, url?: string) {
+  if (!id && !url) return
   switch (type) {
     case 'ethnic':
-      navigation.navigate('EthnicDetail', { id })
+      if (id) navigation.navigate('EthnicDetail', { id })
       break
     case 'festival':
-      navigation.navigate('FestivalDetail', { id })
+      if (id) navigation.navigate('FestivalDetail', { id })
       break
     case 'art':
-      navigation.navigate('ArtDetail', { id })
+      if (id) navigation.navigate('ArtDetail', { id })
       break
     case 'topic':
-      navigation.navigate('TopicDetail', { id })
+      if (id) navigation.navigate('TopicDetail', { id })
       break
+    case 'person':
+      navigation.navigate('Persons')
+      break
+    case 'area':
+      navigation.navigate('Autonomous')
+      break
+    case 'sport':
+      navigation.navigate('Sports')
+      break
+    case 'food':
+    case 'custom': {
+      const m = url?.match(/\/ethnic\/([^/#?]+)/)
+      if (m?.[1]) navigation.navigate('EthnicDetail', { id: m[1] })
+      break
+    }
     default:
       break
   }

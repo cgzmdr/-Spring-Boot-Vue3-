@@ -6,8 +6,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import lombok.RequiredArgsConstructor;
 
-import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,15 +18,28 @@ import java.nio.file.Paths;
  * @author cz
  */
 @Configuration
+@RequiredArgsConstructor
 public class StaticResourceConfig implements WebMvcConfigurer {
 
     private static final Logger log = LoggerFactory.getLogger(StaticResourceConfig.class);
+
+    private final UploadProperties uploadProperties;
 
     @Value("${app.static-location:}")
     private String configuredStaticLocation;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 用户上传内容（帖子配图等）与内容静态图分开映射
+        Path uploadRoot = uploadProperties.root();
+        if (Files.isDirectory(uploadRoot)) {
+            String location = uploadRoot.toUri().toString();
+            if (!location.endsWith("/")) {
+                location = location + "/";
+            }
+            registry.addResourceHandler("/uploads/**").addResourceLocations(location);
+            log.info("用户上传资源目录: {}", location);
+        }
         String externalLocation = resolveExternalStaticLocation();
         if (externalLocation != null) {
             if (!Files.isDirectory(Paths.get(externalLocation))) {
@@ -34,10 +49,16 @@ public class StaticResourceConfig implements WebMvcConfigurer {
             if (!"images".equals(externalRoot.getFileName() == null ? "" : externalRoot.getFileName().toString())) {
                 externalRoot = externalRoot.resolve("images");
             }
-            String externalImagesLocation = externalRoot.toString();
+            // 用 Path#toUri 生成规范 file:/// URL（Windows 下形如 file:///C:/...），
+            // 手写 "file:" + 路径会产生非层级 URI，导致资源解析异常（图片全部 500）。
+            String externalImagesLocation = externalRoot.toAbsolutePath().normalize().toUri().toString();
+            if (!externalImagesLocation.endsWith("/")) {
+                externalImagesLocation = externalImagesLocation + "/";
+            }
+            log.info("静态图片资源目录: {} (存在: {})", externalImagesLocation, Files.isDirectory(externalRoot));
             registry.addResourceHandler("/images/**")
                     .addResourceLocations(
-                            "file:" + toFileUrlPath(externalImagesLocation) + "/",
+                            externalImagesLocation,
                             "classpath:/static/images/"
                     );
         } else {
@@ -70,26 +91,32 @@ public class StaticResourceConfig implements WebMvcConfigurer {
             if (codeSource == null) {
                 return null;
             }
+            // code source 位置在各种运行方式下形式不同：
+            //   file:/app.jar                                  —— 普通 jar
+            //   jar:file:/app.jar!/BOOT-INF/classes!/           —— Spring Boot fat jar（旧）
+            //   jar:nested:/app.jar/!BOOT-INF/classes!/         —— Spring Boot 3.2+ nested jar
+            //   file:/build/classes/java/main/                  —— 开发环境（bootRun / IDE）
             String location = codeSource.getLocation().toString();
-            if (location.startsWith("jar:")) {
-                location = location.substring(4);
-            }
+            location = location.replaceFirst("^(jar:)?(nested:)?(file:)?", "");
             int bangIndex = location.indexOf('!');
             if (bangIndex >= 0) {
                 location = location.substring(0, bangIndex);
             }
-            URI uri = URI.create(location);
-            Path path = Paths.get(uri);
-            if (Files.isDirectory(path)) {
+            int jarEnd = location.lastIndexOf(".jar");
+            if (jarEnd < 0) {
+                // 开发环境：classpath 中存在 static，无需外部目录
                 return null;
             }
-            return path.getParent();
+            String jarPath = URLDecoder.decode(location.substring(0, jarEnd + 4), StandardCharsets.UTF_8);
+            // Windows 下 URI 形式为 /C:/path/app.jar，需去掉前导斜杠
+            if (jarPath.matches("^/[A-Za-z]:/.*")) {
+                jarPath = jarPath.substring(1);
+            }
+            Path jar = Paths.get(jarPath);
+            return Files.isRegularFile(jar) ? jar.getParent() : null;
         } catch (Exception e) {
+            log.warn("解析 jar 所在目录失败，静态资源将回退到 classpath：{}", e.getMessage());
             return null;
         }
-    }
-
-    private String toFileUrlPath(String path) {
-        return path.replace('\\', '/');
     }
 }

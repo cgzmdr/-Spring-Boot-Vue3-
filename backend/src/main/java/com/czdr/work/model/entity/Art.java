@@ -34,6 +34,10 @@ public class Art implements ProxyEntityAvailable<Art, ArtProxy> {
     public String category;
     public String intangibleHeritage;
     public String description;
+    /** 英文正文（方向 C-3）；为空时前端回退显示中文 description */
+    public String descriptionEn;
+    /** 英文正文来源：machine 机器翻译 / reviewed 人工校对 / manual 后台录入 */
+    public String descriptionEnSource;
     /** 发展沿革 */
     public String origin;
     @Column(dbType = "jsonb", jdbcType = JDBCType.JAVA_OBJECT,

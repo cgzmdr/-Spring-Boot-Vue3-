@@ -5,6 +5,7 @@ import { Warning, ArrowRight } from "@element-plus/icons-vue";
 import SectionRule from "@/components/SectionRule.vue";
 import EthnicCard from "@/components/EthnicCard.vue";
 import CoverImage from "@/components/CoverImage.vue";
+import PopulationViz from "@/components/PopulationViz.vue";
 import {
 	ethnicApi,
 	festivalApi,
@@ -15,6 +16,7 @@ import {
 } from "@/api/modules";
 import type {
 	EthnicBrief,
+	EthnicPopulationStats,
 	FestivalListItem,
 	ArtListItem,
 	TopicListItem,
@@ -22,6 +24,7 @@ import type {
 } from "@/api/types";
 import { useLangStore } from "@/stores/lang";
 import { useRouter } from "vue-router";
+import { fadeUp, stagger } from "@/utils/motion";
 
 const lang = useLangStore();
 const centerDialogVisible = ref(false);
@@ -29,6 +32,8 @@ const ethnicBriefs = ref<EthnicBrief[]>([]);
 const festivals = ref<FestivalListItem[]>([]);
 const arts = ref<ArtListItem[]>([]);
 const topics = ref<TopicListItem[]>([]);
+/** 人口可视化（七普口径） */
+const popStats = ref<EthnicPopulationStats | null>(null);
 const loading = ref(false);
 const submitting = ref(false);
 const schema = ref();
@@ -78,12 +83,13 @@ const router = useRouter();
 onMounted(async () => {
 	loading.value = true;
 	try {
-		const [briefs, fRes, aRes, tRes, formRes] = await Promise.allSettled([
+		const [briefs, fRes, aRes, tRes, formRes, popRes] = await Promise.allSettled([
 			ethnicApi.list({ page: 1, size: 12, sort: "orderNum,asc" }),
 			festivalApi.list({ page: 0, size: 6 }),
 			artApi.list({ page: 0, size: 6 }),
 			topicApi.list({ page: 0, size: 6 }),
 			formApi.getByCode("feedback"),
+			ethnicApi.populationStats(8),
 		]);
 		if (formRes.status === "fulfilled")
 			schema.value = JSON.parse(formRes.value.schema);
@@ -97,6 +103,8 @@ onMounted(async () => {
 		// 后端有专题数据时优先展示，否则回退到内置固定专题
 		if (tRes.status === "fulfilled" && tRes.value.data?.length)
 			topics.value = tRes.value.data.slice(0, 3);
+		// 人口可视化：失败则整段不渲染（不阻塞首页其余内容）
+		if (popRes.status === "fulfilled") popStats.value = popRes.value;
 	} catch {
 		ElMessage.error("首页数据加载失败");
 	} finally {
@@ -117,6 +125,11 @@ const features = computed(() =>
 			}))
 		: staticFeatures.value,
 );
+
+/** 列表错峰入场动效（@vueuse/motion） */
+function cardMotion(index: number) {
+	return fadeUp({ delay: stagger(index, 70), distance: 18 });
+}
 
 /** 访问日期统一为 YYYY-MM-DD（el-date-picker 返回 Date 对象） */
 function formatDate(d: unknown): string {
@@ -281,10 +294,11 @@ async function handleSubmit() {
 			/>
 			<div class="grid grid-3 seam">
 				<router-link
-					v-for="f in features"
+					v-for="(f, i) in features"
 					:key="f.no"
 					:to="f.to"
 					class="feature"
+					v-motion="cardMotion(i)"
 				>
 					<div class="img">
 						<CoverImage
@@ -323,6 +337,7 @@ async function handleSubmit() {
 						<router-link
 							class="list-item"
 							:to="`/festival/${f.id}`"
+							v-motion="cardMotion(i)"
 						>
 							<div class="idx">NO. 0{{ i + 1 }}</div>
 							<h5>{{ f.name }}</h5>
@@ -350,6 +365,7 @@ async function handleSubmit() {
 						<router-link
 							class="list-item"
 							:to="`/art/${a.id}`"
+							v-motion="cardMotion(i)"
 						>
 							<div class="idx">NO. 0{{ i + 1 }}</div>
 							<h5>{{ a.name }}</h5>
@@ -366,6 +382,29 @@ async function handleSubmit() {
 					/>
 				</div>
 			</div>
+		</div>
+	</section>
+
+	<!-- 04 人口图谱（数据可视化） -->
+	<section
+		v-if="popStats"
+		class="section"
+		style="background: var(--paper-2)"
+	>
+		<div class="container">
+			<SectionRule
+				:no="'04'"
+				:title="lang.pick('人口图谱', 'Population Atlas')"
+			/>
+			<p class="viz-dek">
+				{{
+					lang.pick(
+						"以 2020 年第七次全国人口普查数据为口径，从人口规模、语系构成与聚居地域三个维度看各民族。",
+						"Visualising China's 56 ethnic groups by population size, language family and settlement region, based on the 2020 national census.",
+					)
+				}}
+			</p>
+			<PopulationViz :stats="popStats" />
 		</div>
 	</section>
 
@@ -464,6 +503,13 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
+.viz-dek {
+	font-size: 14.5px;
+	line-height: 1.85;
+	color: var(--muted);
+	max-width: 62ch;
+	margin: -12px 0 22px;
+}
 .culture-col {
 	background: var(--paper);
 	padding: 30px 34px;
@@ -478,8 +524,8 @@ async function handleSubmit() {
 }
 .aside-btn {
 	position: fixed;
-	right: 1rem;
-	bottom: 2rem;
+	right: 64px;
+	bottom: 120px;
 	.feedback {
 		box-shadow: -1px 2px 6px 4px rgba(0, 0, 0, 0.04);
 		border: 1px solid var(--line);
@@ -487,10 +533,10 @@ async function handleSubmit() {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		width: 36px;
-		height: 36px;
+		width: 40px;
+		height: 40px;
 		cursor: pointer;
-		background-color: var(--paper);
+		background-color: #fff;
 		transition: all ease-in-out 0.3s;
 	}
 	.feedback:hover {

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -44,6 +45,15 @@ public class EthnicConvert {
 
     //EthnicInfoDetailedResource
     public static EthnicInfoDetailedResource toInfoDetailedModel(EthnicGroup entity){
+        return toInfoDetailedModel(entity, null);
+    }
+
+    /**
+     * @param history 历史沿革结构化结果（方向 C-2）；由调用方用 {@code EthnicHistoryParser} 解析后传入，
+     *                为 null 时返回空结构，前端据此隐藏时间轴区块。
+     */
+    public static EthnicInfoDetailedResource toInfoDetailedModel(EthnicGroup entity,
+                                                                com.czdr.work.model.resource.EthnicHistoryResource history){
         return new EthnicInfoDetailedResource(
                 entity.getId().toString(),
                 entity.getSlug(),
@@ -74,14 +84,15 @@ public class EthnicConvert {
                 entity.getLocations(),
                 entity.getFoods(),
                 entity.getFestivals(),
-                entity.getArts()
+                entity.getArts(),
+                history
         );
     }
     /**
      * JSONB 数组列在实体中以 JSON 文本存储（如 {@code ["东北","西北"]}），
      * 此处解析为字符串数组供接口返回。
      */
-    private static String[] parseStringArray(String json) {
+    public static String[] parseStringArray(String json) {
         if (json == null || json.isBlank()) {
             return new String[0];
         }
@@ -91,5 +102,10 @@ public class EthnicConvert {
         } catch (JsonProcessingException e) {
             return new String[0];
         }
+    }
+
+    /** 同上，但返回 {@code List}（供统计聚合等需要遍历的场景使用） */
+    public static List<String> parseStringList(String json) {
+        return new ArrayList<>(List.of(parseStringArray(json)));
     }
 }

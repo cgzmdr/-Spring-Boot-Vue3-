@@ -3,6 +3,7 @@ package com.czdr.work.controller;
 import com.czdr.work.comment.convert.FestivalConvert;
 import com.czdr.work.comment.resource.Result;
 import com.czdr.work.model.request.FestivalQueryInfoRequest;
+import com.czdr.work.model.resource.FestivalCalendarResource;
 import com.czdr.work.model.resource.FestivalQueryInfoResource;
 import com.czdr.work.service.FestivalService;
 import com.easy.query.core.api.pagination.EasyPageResult;
@@ -45,6 +46,19 @@ public class FestivalsController {
             ) Pageable pageable
     ) {
         return Result.success(festivalService.find(request, pageable));
+    }
+
+    /**
+     * 节日日历（按公历月份聚合）
+     * <p>159/192 条节日只存了农历表述（如「农历正月初一」），此处统一换算为公历日期；
+     * 只精确到月的表述（如「农历八月」）按该月十五估算并标记 approx。</p>
+     */
+    @Operation(summary = "节日日历", description = "按公历月份聚合全部已发布节日，农历日期自动换算为公历；含今日与未来 30 天节日")
+    @GetMapping("calendar")
+    Result<FestivalCalendarResource> calendar(
+            @RequestParam(value = "year", required = false)
+            @Parameter(description = "年份（默认当前年）") Integer year) {
+        return Result.success(festivalService.calendar(year));
     }
 
     /**

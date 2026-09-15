@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Screen } from '../../components/Screen'
@@ -90,7 +90,12 @@ export default function EthnicScreen() {
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>{t('ethnic.title')}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{t('ethnic.title')}</Text>
+              <Pressable onPress={() => navigation.navigate('Languages')}>
+                <Text style={styles.entry}>{t('ethnic.languagesAtlas')} →</Text>
+              </Pressable>
+            </View>
             <FilterGroup label={t('ethnic.region')} options={[t('common.all'), ...REGIONS]} value={region} onChange={(v) => setRegion(v === t('common.all') ? '' : v)} />
             <FilterGroup label={t('ethnic.language')} options={[t('common.all'), ...FAMILIES]} value={family} onChange={(v) => setFamily(v === t('common.all') ? '' : v)} />
             <FilterGroup label={t('ethnic.sort')} options={[t('ethnic.sortOrder'), t('ethnic.sortPopulation'), t('ethnic.sortPinyin')]} value={sort} onChange={(v) => setSort(v === t('ethnic.sortOrder') ? '' : v === t('ethnic.sortPopulation') ? 'population' : 'pinyin')} />
@@ -123,8 +128,17 @@ const styles = StyleSheet.create({
     fontFamily: type.serif,
     fontSize: 28,
     color: palette.ink,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     marginVertical: spacing.md,
+  },
+  entry: {
+    fontSize: 13,
+    color: palette.accent,
   },
   filterGroup: {
     marginBottom: spacing.sm,

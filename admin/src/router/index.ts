@@ -73,6 +73,60 @@ const routes: RouteRecordRaw[] = [
 				meta: { title: "编辑专题", hidden: true },
 			},
 			{
+				path: "person",
+				name: "Person",
+				component: () => import("@/pages/person/index.vue"),
+				meta: { title: "人物档案" },
+			},
+			{
+				path: "person/edit",
+				name: "PersonEdit",
+				component: () => import("@/pages/person/Edit.vue"),
+				meta: { title: "编辑人物档案", hidden: true },
+			},
+			{
+				path: "area",
+				name: "Area",
+				component: () => import("@/pages/area/index.vue"),
+				meta: { title: "自治地方" },
+			},
+			{
+				path: "area/edit",
+				name: "AreaEdit",
+				component: () => import("@/pages/area/Edit.vue"),
+				meta: { title: "编辑自治地方", hidden: true },
+			},
+			{
+				path: "sport",
+				name: "Sport",
+				component: () => import("@/pages/sport/index.vue"),
+				meta: { title: "传统体育" },
+			},
+			{
+				path: "sport/edit",
+				name: "SportEdit",
+				component: () => import("@/pages/sport/Edit.vue"),
+				meta: { title: "编辑传统体育", hidden: true },
+			},
+			{
+				path: "source",
+				name: "Source",
+				component: () => import("@/pages/source/index.vue"),
+				meta: { title: "内容来源" },
+			},
+			{
+				path: "source/edit",
+				name: "SourceEdit",
+				component: () => import("@/pages/source/Edit.vue"),
+				meta: { title: "编辑内容来源", hidden: true },
+			},
+			{
+				path: "credit",
+				name: "Credit",
+				component: () => import("@/pages/credit/index.vue"),
+				meta: { title: "图片署名" },
+			},
+			{
 				path: "form",
 				name: "Form",
 				component: () => import("@/pages/form/index.vue"),
@@ -89,6 +143,25 @@ const routes: RouteRecordRaw[] = [
 				name: "Review",
 				component: () => import("@/pages/review/index.vue"),
 				meta: { title: "审核管理" },
+			},
+			{
+				path: "discussion",
+				name: "Discussion",
+				component: () => import("@/pages/discussion/index.vue"),
+				meta: { title: "讨论区治理" },
+			},
+			{
+				path: "translate",
+				name: "Translate",
+				component: () => import("@/pages/translate/index.vue"),
+				meta: { title: "翻译词表" },
+			},
+			{
+				// 检索索引与兴趣标签（方向 D）
+				path: "search-index",
+				name: "SearchIndex",
+				component: () => import("@/pages/search-index/index.vue"),
+				meta: { title: "检索与推荐" },
 			},
 			{
 				path: "user",

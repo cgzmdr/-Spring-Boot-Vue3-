@@ -7,13 +7,40 @@ import SectionRule from '../../components/SectionRule'
 import EthnicCard from '../../components/EthnicCard'
 import ListItem from '../../components/ListItem'
 import EmptyView from '../../components/EmptyView'
-import { ethnicApi, festivalApi, artApi, topicApi } from '../../api/modules'
-import type { EthnicListItem, FestivalListItem, ArtListItem, TopicListItem } from '../../api/types'
+import { ethnicApi, festivalApi, artApi, topicApi, recommendApi } from '../../api/modules'
+import type { EthnicListItem, FestivalListItem, ArtListItem, TopicListItem, RecoItem } from '../../api/types'
 import { useLangStore } from '../../stores/lang'
+import { navigateByContentType } from '../../utils/navigate'
 import { palette, radius, spacing, type } from '../../theme'
 import type { RootStackParamList } from '../../navigation/types'
 
 type Nav = NativeStackNavigationProp<RootStackParamList>
+
+const DIRECTORY: {
+  key: string
+  labelKey:
+    | 'dir.heritage'
+    | 'dir.persons'
+    | 'dir.autonomous'
+    | 'dir.sports'
+    | 'dir.costume'
+    | 'dir.dwelling'
+    | 'dir.languages'
+    | 'dir.interests'
+    | 'dir.calendar'
+  route: keyof RootStackParamList
+  topic?: 'costume' | 'dwelling'
+}[] = [
+  { key: 'heritage', labelKey: 'dir.heritage', route: 'Heritage' },
+  { key: 'persons', labelKey: 'dir.persons', route: 'Persons' },
+  { key: 'autonomous', labelKey: 'dir.autonomous', route: 'Autonomous' },
+  { key: 'sports', labelKey: 'dir.sports', route: 'Sports' },
+  { key: 'costume', labelKey: 'dir.costume', route: 'CultureTopic', topic: 'costume' },
+  { key: 'dwelling', labelKey: 'dir.dwelling', route: 'CultureTopic', topic: 'dwelling' },
+  { key: 'languages', labelKey: 'dir.languages', route: 'Languages' },
+  { key: 'interests', labelKey: 'dir.interests', route: 'Interests' },
+  { key: 'calendar', labelKey: 'dir.calendar', route: 'FestivalCalendar' },
+]
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>()
@@ -24,6 +51,8 @@ export default function HomeScreen() {
   const [topics, setTopics] = useState<TopicListItem[]>([])
   const [festivals, setFestivals] = useState<FestivalListItem[]>([])
   const [arts, setArts] = useState<ArtListItem[]>([])
+  const [reco, setReco] = useState<RecoItem[]>([])
+  const [recoNote, setRecoNote] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,20 +73,62 @@ export default function HomeScreen() {
       } finally {
         setLoading(false)
       }
+      try {
+        const r = await recommendApi.recommend({ size: 6 })
+        setReco(r.list)
+        setRecoNote([r.basisLabel, r.dataNote].filter(Boolean).join(' · '))
+      } catch {
+        // 推荐失败不影响首页
+      }
     })()
   }, [])
 
-  const goEthnic = (id: string) => navigation.navigate('EthnicDetail', { id })
   const goFestival = (id: string) => navigation.navigate('FestivalDetail', { id })
   const goArt = (id: string) => navigation.navigate('ArtDetail', { id })
   const goTopic = (topic: TopicListItem) =>
     navigation.navigate('TopicDetail', { id: topic.id, title: topic.title })
 
+  const openDir = (item: (typeof DIRECTORY)[number]) => {
+    switch (item.route) {
+      case 'CultureTopic':
+        if (item.topic) navigation.navigate('CultureTopic', { topic: item.topic })
+        break
+      case 'Heritage':
+        navigation.navigate('Heritage')
+        break
+      case 'Persons':
+        navigation.navigate('Persons')
+        break
+      case 'Autonomous':
+        navigation.navigate('Autonomous')
+        break
+      case 'Sports':
+        navigation.navigate('Sports')
+        break
+      case 'Languages':
+        navigation.navigate('Languages')
+        break
+      case 'Interests':
+        navigation.navigate('Interests')
+        break
+      case 'FestivalCalendar':
+        navigation.navigate('FestivalCalendar')
+        break
+      default:
+        break
+    }
+  }
+
   return (
     <ScrollScreen>
       {/* Hero */}
       <View style={styles.hero}>
-        <Text style={styles.kicker}>THE 56 GROUPS · 中华民族</Text>
+        <View style={styles.heroTop}>
+          <Text style={styles.kicker}>THE 56 GROUPS · 中华民族</Text>
+          <Pressable style={styles.searchBtn} onPress={() => navigation.navigate('Search')}>
+            <Text style={styles.searchBtnText}>{t('common.search')}</Text>
+          </Pressable>
+        </View>
         <Text style={styles.heroTitle}>{t('home.heroTitle')}</Text>
         <Text style={styles.heroDek}>{t('home.heroDek')}</Text>
         <View style={styles.stats}>
@@ -66,6 +137,38 @@ export default function HomeScreen() {
           <StatBox value={String(arts.length || '·')} label={t('home.statArts')} />
         </View>
       </View>
+
+      {/* 文化目录 */}
+      <View style={styles.section}>
+        <SectionRule index="00" title={t('home.sectionDir')} />
+        <View style={styles.dirGrid}>
+          {DIRECTORY.map((item) => (
+            <Pressable key={item.key} style={styles.dirItem} onPress={() => openDir(item)}>
+              <Text style={styles.dirLabel}>{t(item.labelKey)}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* 为你推荐 */}
+      {reco.length ? (
+        <View style={styles.section}>
+          <SectionRule index="0R" title={t('home.sectionReco')} />
+          {recoNote ? <Text style={styles.recoNote}>{recoNote}</Text> : null}
+          {reco.map((item) => (
+            <ListItem
+              key={`${item.docType}:${item.docId}`}
+              title={item.title}
+              subtitle={[item.ethnicName, item.reason].filter(Boolean).join(' · ')}
+              image={item.coverImage}
+              fallbackColor={item.themeColor || undefined}
+              fallbackLabel={item.title}
+              onPress={() => navigateByContentType(navigation, item.docType, item.docId, item.url)}
+            />
+          ))}
+          <TextLink text={t('common.viewAll')} onPress={() => navigation.navigate('Interests')} />
+        </View>
+      ) : null}
 
       {/* 01 五十六个民族 */}
       <View style={styles.section}>
@@ -162,11 +265,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
   },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
   kicker: {
     fontSize: 11,
     letterSpacing: 2,
     color: palette.accent,
-    marginBottom: spacing.sm,
+  },
+  searchBtn: {
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: 99,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    backgroundColor: palette.white,
+  },
+  searchBtnText: {
+    fontSize: 12,
+    color: palette.ink,
   },
   heroTitle: {
     fontFamily: type.serif,
@@ -207,6 +327,35 @@ const styles = StyleSheet.create({
   section: {
     marginTop: spacing.lg,
     paddingBottom: spacing.sm,
+  },
+  dirGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  dirItem: {
+    width: '31%',
+    flexGrow: 1,
+    minWidth: '30%',
+    backgroundColor: palette.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    alignItems: 'center',
+  },
+  dirLabel: {
+    fontSize: 13,
+    color: palette.ink,
+    textAlign: 'center',
+  },
+  recoNote: {
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    fontSize: 12,
+    color: palette.faint,
   },
   grid: {
     flexDirection: 'row',

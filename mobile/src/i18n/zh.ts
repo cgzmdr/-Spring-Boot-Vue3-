@@ -31,11 +31,24 @@ export const zh = {
     sectionEthnic: '五十六个民族',
     sectionTopic: '精选专题',
     sectionCulture: '文化之窗',
+    sectionDir: '文化目录',
+    sectionReco: '为你推荐',
     cultureFestival: '节日庆典',
     cultureArt: '传统艺术',
     statGroups: '民族',
     statFestivals: '节日',
     statArts: '艺术',
+  },
+  dir: {
+    heritage: '非遗名录',
+    persons: '人物专栏',
+    autonomous: '自治地方',
+    sports: '传统体育',
+    costume: '民族服饰',
+    dwelling: '民居建筑',
+    languages: '民族语文',
+    interests: '兴趣推荐',
+    calendar: '节日日历',
   },
   ethnic: {
     title: '民族',
@@ -57,6 +70,7 @@ export const zh = {
     scripts: '文字',
     religion: '宗教',
     selfName: '自称',
+    languagesAtlas: '语文图鉴',
   },
   festival: {
     title: '节日庆典',
@@ -64,6 +78,13 @@ export const zh = {
     origin: '起源传说',
     customs: '习俗活动',
     related: '相关节日',
+    calendar: '节日日历',
+  },
+  calendar: {
+    title: '节日日历',
+    today: '今日',
+    upcoming: '未来 30 天',
+    approx: '约估',
   },
   art: {
     title: '传统艺术',
@@ -73,9 +94,50 @@ export const zh = {
     info: '基本信息',
     related: '同类艺术',
   },
+  heritage: {
+    title: '非遗名录',
+    level: '级别',
+    category: '类别',
+  },
+  persons: {
+    title: '人物专栏',
+    role: '角色',
+    domain: '领域',
+  },
+  autonomous: {
+    title: '民族自治地方',
+    byLevel: '按级别',
+    byEthnic: '按民族',
+    byProvince: '按省份',
+  },
+  sports: {
+    title: '传统体育',
+    venue: '场地',
+    equipment: '器材',
+    subEvents: '子项',
+  },
+  culture: {
+    title: '文化专题',
+    costume: '民族服饰',
+    dwelling: '民居建筑',
+  },
+  languages: {
+    title: '民族语文',
+    byFamily: '按语系',
+    byScript: '按文字',
+  },
+  interests: {
+    title: '兴趣与推荐',
+    dek: '勾选感兴趣的民族、地域与主题，获得更贴近的推荐；游客也可浏览热度内容。',
+    save: '保存兴趣',
+    loginToSave: '登录后保存兴趣',
+    saved: '兴趣已保存',
+    saveFailed: '保存失败，请稍后重试',
+    forYou: '为你推荐',
+  },
   search: {
     title: '搜索',
-    placeholder: '搜索民族、节日、艺术…',
+    placeholder: '搜索民族、节日、艺术、人物…（支持拼音）',
     hot: '热门搜索',
     result: '搜索结果',
     resultCount: '个结果',
@@ -119,6 +181,7 @@ export const zh = {
     about: '关于本站',
     settings: '设置',
     language: '语言',
+    interests: '兴趣推荐',
   },
   interact: {
     like: '点赞',
@@ -128,6 +191,6 @@ export const zh = {
     shareFailed: '分享失败',
     loginTip: '登录后才能进行此操作',
   },
-} 
+}
 
 export type ZhDict = typeof zh

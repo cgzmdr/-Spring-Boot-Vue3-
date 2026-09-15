@@ -23,6 +23,8 @@ public class FestivalConvert {
                 entity.getLunarDate(),
                 entity.getOrigin(),
                 entity.getDescription(),
+                entity.getDescriptionEn(),
+                entity.getDescriptionEnSource(),
                 JsonUtil.toStringArray(entity.getCustoms()),
                 JsonUtil.toStringArray(entity.getImages()),
                 entity.getCoverImage()

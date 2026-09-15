@@ -10,4 +10,9 @@ public interface RedisService {
     void setList(String key, Object value);
     void setSet(String key, Object... values);
     Boolean delete(String key);
+
+    /**
+     * 自增计数（限流 / 未读计数等）：首次写入时设置过期时间，返回自增后的值。
+     */
+    long increment(String key, long timeoutSeconds);
 }

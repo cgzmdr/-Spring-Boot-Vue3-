@@ -1,19 +1,7 @@
-# ============================================================================
-# 基础配置（通用、无敏感信息，随仓库发布）
-# ----------------------------------------------------------------------------
-# 敏感信息（数据库/Redis/邮箱/加密密钥/初始管理员）一律不写在这里，
-# 而是放入各运行环境的配置文件，且这些文件已被 .gitignore 忽略、不会上传：
-#   - application-dev.yaml  本地开发
-#   - application-prod.yaml 生产部署
-# 新环境请复制 src/main/resources/application-example.yaml 并按注释填写真实值。
-# 也可通过环境变量注入（格式 ${ENV_NAME:默认值}）。
-# ============================================================================
-
 spring:
   mail:
     host: smtp.qq.com
     port: 465
-    # 发件邮箱账号 / SMTP 授权码（真实值见 application-dev.yaml / application-prod.yaml）
     username: ${MAIL_USERNAME:your-mail@example.com}
     password: ${MAIL_PASSWORD:your-smtp-authorization-code}
     default-encoding: UTF-8
@@ -42,7 +30,7 @@ spring:
     virtual:
       enabled: true
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   application:
     name: 56-app
   servlet:
@@ -65,13 +53,26 @@ sa-token:
   is-log: false
 app:
   crypto:
-    # 敏感字段（用户密码、密保答案等）的 AES 加密密钥。
-    # 此处仅为可启动的占位值 —— 生产环境务必用强随机密钥覆盖；
-    # 已上线数据请保持密钥不变（否则历史数据无法解密），真实值见
-    # application-dev.yaml / application-prod.yaml（已被 git 忽略）。
     aes-key: ${APP_AES_KEY:0123456789abcdef}
     aes-iv: ${APP_AES_IV:fedcba9876543210}
   admin:
-    # 首次启动时由 RbacDataInitializer 自动创建的超级管理员账号
     account: ${APP_ADMIN_ACCOUNT:admin@example.com}
     password: ${APP_ADMIN_PASSWORD:Admin12345@}
+  upload:
+    location: ${APP_UPLOAD_LOCATION:./uploads}
+  notify:
+    email-enabled: ${APP_NOTIFY_EMAIL_ENABLED:true}
+    broadcast-max-recipients: ${APP_NOTIFY_BROADCAST_MAX:2000}
+    active-window-days: ${APP_NOTIFY_ACTIVE_DAYS:30}
+  translate:
+    provider: ${APP_TRANSLATE_PROVIDER:glossary}
+    fallback-provider: ${APP_TRANSLATE_FALLBACK:spring-ai}
+    glossary-min-coverage: ${APP_TRANSLATE_MIN_COVERAGE:0.8}
+    auto-glossary-enabled: ${APP_TRANSLATE_AUTO_GLOSSARY:true}
+    auto-glossary-max-terms: ${APP_TRANSLATE_AUTO_GLOSSARY_MAX:8}
+    base-url: ${APP_TRANSLATE_BASE_URL:http://127.0.0.1:8080/v1}
+    api-key: ${APP_TRANSLATE_API_KEY:cz}
+    model: ${APP_TRANSLATE_MODEL:DeepSeek-R1-Distill-Qwen-7B-Q8_0}
+    timeout-seconds: ${APP_TRANSLATE_TIMEOUT:40}
+    max-chars: ${APP_TRANSLATE_MAX_CHARS:4000}
+    cache-enabled: ${APP_TRANSLATE_CACHE:true}

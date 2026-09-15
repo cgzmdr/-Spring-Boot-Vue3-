@@ -9,6 +9,14 @@ export type RootStackParamList = {
   Login: { redirect?: string } | undefined
   Unity: undefined
   About: undefined
+  FestivalCalendar: undefined
+  Heritage: undefined
+  Persons: undefined
+  Autonomous: undefined
+  Sports: undefined
+  CultureTopic: { topic: 'costume' | 'dwelling' }
+  Languages: undefined
+  Interests: undefined
 }
 
 /** 底部 Tab 参数 */

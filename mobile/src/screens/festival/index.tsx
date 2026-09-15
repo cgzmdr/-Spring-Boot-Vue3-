@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { FlatList, StyleSheet, Text, View } from 'react-native'
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { Screen } from '../../components/Screen'
@@ -83,7 +83,12 @@ export default function FestivalScreen() {
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>{t('festival.title')}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>{t('festival.title')}</Text>
+              <Pressable onPress={() => navigation.navigate('FestivalCalendar')}>
+                <Text style={styles.entry}>{t('festival.calendar')} →</Text>
+              </Pressable>
+            </View>
             <View style={styles.chips}>
               {TYPES.map((c) => (
                 <Chip key={c.value} label={t('common.all') === c.label ? t('common.all') : c.label} active={type === c.value} onPress={() => setType(c.value)} />
@@ -105,7 +110,16 @@ const styles = StyleSheet.create({
     fontFamily: type.serif,
     fontSize: 28,
     color: palette.ink,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: spacing.md,
+  },
+  entry: {
+    fontSize: 13,
+    color: palette.accent,
   },
   chips: {
     flexDirection: 'row',

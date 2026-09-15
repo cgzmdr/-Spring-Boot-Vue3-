@@ -6,6 +6,9 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+/**
+ * @author cz
+ */
 public class AesCbcUtil {
 
     // 指定算法/模式/填充方式

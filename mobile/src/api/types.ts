@@ -132,11 +132,15 @@ export interface ArtListItem {
   nameEn?: string
   category?: string
   intangible?: boolean
+  /** 非遗级别编码，如 world / national */
+  intangibleHeritage?: string
+  inheritors?: string[]
   description?: string
   coverImage?: string | null
   themeColor?: string
   ethnicGroupId?: string
   ethnicName?: string
+  ethnicGroupName?: string
 }
 
 /** 艺术详情 */
@@ -224,3 +228,331 @@ export interface UserInfo {
 }
 
 export type ContentType = 'ethnic' | 'festival' | 'art' | 'topic'
+
+/* ---- 节日日历 ---- */
+
+export interface CalendarFestival {
+  id: string
+  name: string
+  nameEn: string | null
+  ethnicGroupName: string | null
+  type: string
+  /** 公历日期 yyyy-MM-dd */
+  date: string
+  day: number
+  lunarDate: string | null
+  dateSource: 'solar' | 'lunar' | 'approx'
+  daysFromToday: number
+}
+
+export interface CalendarMonth {
+  month: number
+  count: number
+  festivals: CalendarFestival[]
+}
+
+export interface FestivalCalendar {
+  year: number
+  months: CalendarMonth[]
+  today: CalendarFestival | null
+  upcoming: CalendarFestival[]
+}
+
+/* ---- 非遗名录 ---- */
+
+export interface HeritageGroup {
+  code: string
+  label: string
+  count: number
+}
+
+export interface HeritageSpotlight {
+  id: string
+  name: string
+  intangibleHeritage: string
+  ethnicGroupName: string | null
+  inheritors: string[]
+}
+
+export interface HeritageStats {
+  total: number
+  withInheritor: number
+  ethnicCount: number
+  levels: HeritageGroup[]
+  categories: HeritageGroup[]
+  spotlight: HeritageSpotlight[]
+}
+
+/* ---- 民族语文 ---- */
+
+export interface LanguageGroupRef {
+  id: string
+  name: string
+  pinyin: string
+  themeColor: string
+  population: number
+  languages: string[]
+  scripts: string[]
+}
+
+export interface LanguageFamily {
+  name: string
+  family: string
+  branch: string | null
+  groups: LanguageGroupRef[]
+  population: number
+}
+
+export interface LanguageScript {
+  name: string
+  groups: LanguageGroupRef[]
+  nativeScript: boolean
+}
+
+export interface LanguageAtlas {
+  summary: {
+    groupCount: number
+    languageCount: number
+    scriptCount: number
+    familyCount: number
+  }
+  families: LanguageFamily[]
+  scripts: LanguageScript[]
+  groupsWithOwnScript: number
+  groupsUsingChinese: number
+}
+
+/* ---- 文化专题（服饰 / 民居） ---- */
+
+export interface CultureTopicItem {
+  source: 'custom' | 'art'
+  id: string | null
+  title: string
+  category: string | null
+  content: string | null
+  intangibleHeritage: string | null
+  image: string | null
+  detailPath: string
+}
+
+export interface CultureTopicEntry {
+  ethnicGroupId: string
+  ethnicGroupName: string
+  themeColor: string
+  region: string | null
+  coverImage: string | null
+  items: CultureTopicItem[]
+}
+
+export interface CultureTopicCategory {
+  code: string
+  label: string
+  count: number
+}
+
+export interface CultureTopic {
+  topic: string
+  title: string
+  titleEn: string
+  intro: string
+  summary: {
+    groupCount: number
+    entryCount: number
+    heritageCount: number
+    withImage: number
+  }
+  categories: CultureTopicCategory[]
+  entries: CultureTopicEntry[]
+}
+
+/* ---- 人物专栏 ---- */
+
+export interface PersonProjectRef {
+  id: string
+  name: string
+  intangibleHeritage: string
+  ethnicGroupName: string | null
+  detailPath: string
+}
+
+export interface PersonItem {
+  name: string
+  ethnicGroupName: string | null
+  roleType: 'inheritor' | 'master'
+  roleLabel: string
+  domain: string | null
+  lifespan: string | null
+  bio: string | null
+  projects: PersonProjectRef[]
+  topLevel: string | null
+}
+
+export interface PersonOption {
+  value: string
+  label: string
+  count: number
+}
+
+export interface PersonDirectory {
+  summary: {
+    personCount: number
+    inheritorCount: number
+    masterCount: number
+    ethnicCount: number
+    projectCount: number
+  }
+  filters: {
+    domains: PersonOption[]
+    ethnics: PersonOption[]
+    roles: PersonOption[]
+  }
+  persons: PersonItem[]
+  total: number
+}
+
+/* ---- 民族自治地方 ---- */
+
+export interface AutonomousArea {
+  name: string
+  level: string
+  levelLabel: string
+  ethnicGroups: string[]
+  province: string | null
+  establishedYear: number | null
+  seat: string | null
+}
+
+export interface AreaLevelGroup {
+  level: string
+  label: string
+  count: number
+  areas: AutonomousArea[]
+}
+
+export interface AreaEthnicGrouping {
+  ethnic: string
+  count: number
+  matchedName: string | null
+  matchedSlug: string | null
+  themeColor: string | null
+  areas: AutonomousArea[]
+}
+
+export interface AreaProvinceGrouping {
+  province: string
+  count: number
+  areas: AutonomousArea[]
+}
+
+export interface AutonomousAreaDirectory {
+  summary: {
+    total: number
+    regionCount: number
+    prefectureCount: number
+    countyCount: number
+    ethnicCount: number
+    provinceCount: number
+  }
+  levels: AreaLevelGroup[]
+  ethnics: AreaEthnicGrouping[]
+  provinces: AreaProvinceGrouping[]
+}
+
+/* ---- 传统体育 ---- */
+
+export interface SportEthnicRef {
+  id: string
+  name: string
+  slug: string
+  themeColor: string
+}
+
+export interface TraditionalSport {
+  name: string
+  category: string
+  categoryLabel: string
+  ethnicOrigins: string[]
+  description: string | null
+  equipment: string | null
+  venue: string | null
+  teamSize: string | null
+  firstEventYear: number | null
+  subEvents: string[]
+  heritageLink: string | null
+  matchedEthnics: SportEthnicRef[]
+}
+
+export interface TraditionalSportDirectory {
+  summary: {
+    total: number
+    categoryCount: number
+    ethnicCount: number
+    withSubEvents: number
+    withHeritage: number
+  }
+  sports: TraditionalSport[]
+}
+
+/* ---- 全文检索 / 兴趣推荐 ---- */
+
+export interface SearchHit {
+  docType: string
+  docId: string
+  url: string
+  title: string
+  titleHtml: string
+  summary: string | null
+  summaryHtml: string
+  ethnicName: string | null
+  category: string | null
+  region: string | null
+  coverImage: string | null
+  themeColor: string | null
+  score: number
+  matchBy: string
+}
+
+export interface FullTextSearchResult {
+  keyword: string
+  total: number
+  tookMs: number
+  type: string
+  list: SearchHit[]
+  facets: Record<string, number>
+  highlights: Record<string, number>
+}
+
+export interface InterestTag {
+  id: string
+  dimension: string
+  name: string
+  nameEn: string | null
+  description: string | null
+  color: string | null
+  enabled: boolean
+  orderNum: number
+}
+
+export interface RecoItem {
+  docType: string
+  docId: string
+  url: string
+  title: string
+  summary: string | null
+  ethnicName: string | null
+  category: string | null
+  coverImage: string | null
+  themeColor: string | null
+  score: number
+  reason: string | null
+}
+
+export interface Recommendation {
+  list: RecoItem[]
+  basis: string
+  basisLabel: string
+  dataNote: string
+  confidence: number
+  behaviorCount: number
+  interestCount: number
+}

@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useLangStore } from '@/stores/lang'
 import { topicApi, ethnicApi, festivalApi, artApi, interactionApi } from '@/api/modules'
 import type { TopicDetail, TopicEntry } from '@/api/types'
 import CoverImage from '@/components/CoverImage.vue'
 import PageHead from '@/components/PageHead.vue'
+import Reveal from '@/components/Reveal.vue'
+import RichArticle from '@/components/RichArticle.vue'
+import { parseArticle } from '@/utils/article'
+import type { ArticleFigure } from '@/utils/article'
+import { stagger, fadeUp } from '@/utils/motion'
 
 const route = useRoute()
 const lang = useLangStore()
@@ -17,6 +22,22 @@ const viewCount = ref(0)
 const entries = ref<{ entry: TopicEntry; title: string; cover: string | null; path: string; themeColor?: string }[]>([])
 
 const TYPE_LABEL: Record<string, string> = { ethnic: '民族', festival: '节日', art: '艺术', topic: '专题' }
+
+/** 专题简介：解析为结构化段落（支持图文并茂） */
+const blocks = computed(() => parseArticle(detail.value?.description))
+
+/** 正文配图：专题条目封面（让专题介绍不再只是纯文本） */
+const figures = computed<ArticleFigure[]>(() =>
+  entries.value
+    .filter((e) => e.cover)
+    .slice(0, 4)
+    .map((e) => ({ src: e.cover, caption: `${e.title} · ${TYPE_LABEL[e.entry.entryType] || ''}` })),
+)
+
+/** 条目卡片错峰入场（@vueuse/motion） */
+function fadeUpVariants(index: number) {
+  return fadeUp({ delay: stagger(index, 50, 400), distance: 16 })
+}
 
 async function loadEntry(item: TopicEntry) {
   try {
@@ -64,17 +85,28 @@ onMounted(async () => {
     <template v-if="detail">
       <PageHead :kicker="'TOPIC'" :title="detail.title" :dek="detail.subtitle" />
       <div class="container topic-body">
-        <div class="hero">
+        <div class="hero" v-motion-fade-in>
           <CoverImage :src="detail.coverImage" :name="detail.title" :theme="'#B6402E'" size="landscape_16_9" />
         </div>
-        <p class="desc">{{ detail.description }}</p>
+
+        <!-- 专题介绍：图文并茂（段落间穿插条目封面） -->
+        <RichArticle v-if="blocks.length" :blocks="blocks" :images="figures" :max-figures="3" />
+
         <div class="meta-row">
           <span class="view-count">浏览量 {{ viewCount }}</span>
         </div>
 
-        <h3 class="sec-title">{{ lang.pick('专题内容', 'Contents') }} <span class="count">{{ entries.length }}</span></h3>
+        <Reveal :y="14">
+          <h3 class="sec-title">{{ lang.pick('专题内容', 'Contents') }} <span class="count">{{ entries.length }}</span></h3>
+        </Reveal>
         <div class="grid grid-3">
-          <router-link v-for="e in entries" :key="e.entry.id" :to="e.path" class="entry-card">
+          <router-link
+            v-for="(e, i) in entries"
+            :key="e.entry.id"
+            :to="e.path"
+            class="entry-card"
+            v-motion="fadeUpVariants(i)"
+          >
             <div class="img">
               <CoverImage :src="e.cover" :name="e.title" :theme="e.themeColor || '#B6402E'" size="landscape_4_3" />
             </div>

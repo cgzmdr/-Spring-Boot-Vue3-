@@ -113,18 +113,85 @@ export const REGION_OPTIONS = [
   '其他'
 ]
 
-/** 侧边栏菜单（roles 权限控制） */
-export const MENU_CONFIG = [
-  { path: '/dashboard', title: '仪表盘', icon: 'Odometer', roles: [] },
-  { path: '/ethnic', title: '民族管理', icon: 'Flag', roles: [] },
-  { path: '/festival', title: '节日管理', icon: 'Calendar', roles: [] },
-  { path: '/art', title: '艺术管理', icon: 'Headset', roles: [] },
-  { path: '/topic', title: '专题管理', icon: 'Collection', roles: [] },
-  { path: '/form', title: '表单配置', icon: 'EditPen', roles: ['super_admin', 'content_admin'] },
-  { path: '/review', title: '审核管理', icon: 'DocumentChecked', roles: ['super_admin', 'reviewer', 'content_admin'] },
-  { path: '/user', title: '用户管理', icon: 'User', roles: ['super_admin', 'content_admin'] },
-  { path: '/role', title: '角色管理', icon: 'Lock', roles: ['super_admin'] }
+/**
+ * 侧边栏菜单（按**业务域**分组，不按部门或表名）
+ *
+ * 分组原则：让使用者按「我要做什么」而非「数据在哪张表」来找到入口。
+ *   · 工作台   —— 全局概览与待办
+ *   · 内容运营 —— 站内所有对外展示的内容（民族/节日/艺术/专题/表单 + B 系列新增的文化资料）
+ *   · 社区治理 —— 用户产生内容与合规处置
+ *   · 系统设置 —— 账号权限与平台级配置
+ */
+export interface MenuItem {
+  path: string
+  title: string
+  icon: string
+  roles: string[]
+}
+export interface MenuGroup {
+  key: string
+  title: string
+  icon: string
+  /** 该组可见所需的角色（空数组表示所有人可见） */
+  roles: string[]
+  children: MenuItem[]
+}
+
+export const MENU_GROUPS: MenuGroup[] = [
+  {
+    key: 'workbench',
+    title: '工作台',
+    icon: 'Odometer',
+    roles: [],
+    children: [{ path: '/dashboard', title: '数据概览', icon: 'Odometer', roles: [] }]
+  },
+  {
+    key: 'content',
+    title: '内容运营',
+    icon: 'Collection',
+    roles: [],
+    children: [
+      { path: '/ethnic', title: '民族', icon: 'Flag', roles: [] },
+      { path: '/festival', title: '节日', icon: 'Calendar', roles: [] },
+      { path: '/art', title: '艺术', icon: 'Headset', roles: [] },
+      { path: '/topic', title: '专题', icon: 'Files', roles: [] },
+      // —— 方向 B 新增的文化资料（原先只有 C 端展示，后台不可维护）——
+      { path: '/person', title: '人物档案', icon: 'UserFilled', roles: ['super_admin', 'content_admin', 'editor'] },
+      { path: '/area', title: '自治地方', icon: 'MapLocation', roles: ['super_admin', 'content_admin', 'editor'] },
+      { path: '/sport', title: '传统体育', icon: 'Basketball', roles: ['super_admin', 'content_admin', 'editor'] },
+      { path: '/form', title: '表单配置', icon: 'EditPen', roles: ['super_admin', 'content_admin'] }
+    ]
+  },
+  {
+    key: 'community',
+    title: '社区治理',
+    icon: 'ChatDotRound',
+    roles: ['super_admin', 'reviewer', 'content_admin', 'operator'],
+    children: [
+      { path: '/discussion', title: '讨论区', icon: 'ChatDotRound', roles: ['super_admin', 'reviewer', 'content_admin', 'operator'] },
+      { path: '/review', title: '内容审核', icon: 'DocumentChecked', roles: ['super_admin', 'reviewer', 'content_admin'] }
+    ]
+  },
+  {
+    key: 'system',
+    title: '系统设置',
+    icon: 'Setting',
+    roles: ['super_admin', 'content_admin'],
+    children: [
+      { path: '/user', title: '用户管理', icon: 'User', roles: ['super_admin', 'content_admin'] },
+      { path: '/role', title: '角色权限', icon: 'Lock', roles: ['super_admin'] },
+      { path: '/translate', title: '翻译词表', icon: 'MagicStick', roles: ['super_admin', 'content_admin'] },
+      // 检索索引与兴趣标签属于平台级检索/推荐能力（服务全站内容），故归入系统设置
+      { path: '/search-index', title: '检索与推荐', icon: 'Search', roles: ['super_admin', 'content_admin'] },
+      // 内容来源与图片署名属平台级数据治理（服务于全站所有内容的溯源与合规），故归入系统设置
+      { path: '/source', title: '内容来源', icon: 'Link', roles: ['super_admin', 'content_admin', 'editor'] },
+      { path: '/credit', title: '图片署名', icon: 'Picture', roles: ['super_admin', 'content_admin', 'editor'] }
+    ]
+  }
 ]
+
+/** 扁平化的菜单项（用于面包屑 / 权限过滤等需要遍历的场景） */
+export const MENU_CONFIG: MenuItem[] = MENU_GROUPS.flatMap((g) => g.children)
 
 /** 角色编码 -> 名称（后端 /auth/me 返回角色编码） */
 export const ROLE_LABEL: Record<string, string> = {

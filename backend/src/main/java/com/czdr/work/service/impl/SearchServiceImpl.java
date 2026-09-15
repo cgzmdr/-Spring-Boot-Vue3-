@@ -80,6 +80,8 @@ public class SearchServiceImpl implements SearchService {
                             e.name().like(keyword);
                             e.pinyin().like(keyword);
                             e.nameEn().like(keyword);
+                            // 标签（jsonb 数组）同样参与命中：详情页「基本资料 → 标签」可直接跳搜索
+                            e.tags().asAny().toStr().like(keyword);
                         });
                     }
                 })

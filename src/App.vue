@@ -12,5 +12,16 @@ const locale = computed(() => (lang.isEn ? en : zhCn));
 <template>
 	<el-config-provider :locale="locale">
 		<DefaultLayout />
+		<el-tooltip
+			class="box-item"
+			effect="light"
+			content="回到顶部"
+			placement="left"
+		>
+			<el-backtop
+				:right="64"
+				:bottom="64"
+			/>
+		</el-tooltip>
 	</el-config-provider>
 </template>

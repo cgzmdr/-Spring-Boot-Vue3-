@@ -87,6 +87,7 @@ export const favoriteTypeLabel: Record<string, string> = {
   festival: '节日',
   art: '艺术',
   topic: '专题',
+  food: '美食',
 }
 
 /** 收藏内容类型 → 详情页路由名 */
@@ -95,6 +96,7 @@ export const favoriteRouteName: Record<string, string> = {
   festival: 'festival-detail',
   art: 'art-detail',
   topic: 'topic-detail',
+  food: 'food-detail',
 }
 
 /** 收藏内容类型 → 详情页路由路径前缀 */
@@ -103,6 +105,7 @@ export const favoriteRoutePath: Record<string, string> = {
   festival: '/festival',
   art: '/art',
   topic: '/topic',
+  food: '/food',
 }
 
 const API_BASE: string = (import.meta.env.VITE_API_BASE as string) || ''

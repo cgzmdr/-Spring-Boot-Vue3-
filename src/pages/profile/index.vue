@@ -9,7 +9,6 @@ import { useSettingsStore, FONT_SIZE_OPTIONS } from "@/stores/settings";
 import type { FontSize } from "@/stores/settings";
 import { authApi, interactionApi, meApi } from "@/api/modules";
 import type { FavoriteItem, PasswordChangePayload } from "@/api/types";
-import { UploadFilled } from "@element-plus/icons-vue";
 import {
 	favoriteRoutePath,
 	favoriteTypeLabel,
@@ -375,6 +374,7 @@ const favFilters = computed(() => [
 	{ value: "festival", label: "节日" },
 	{ value: "art", label: "艺术" },
 	{ value: "topic", label: "专题" },
+	{ value: "food", label: "美食" },
 ]);
 
 async function loadFavorites(page = favPage.value) {

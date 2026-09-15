@@ -37,6 +37,10 @@ public class Festival implements ProxyEntityAvailable<Festival, FestivalProxy> {
     public String lunarDate;
     public String origin;
     public String description;
+    /** 英文正文（方向 C-3）；为空时前端回退显示中文 description */
+    public String descriptionEn;
+    /** 英文正文来源：machine 机器翻译 / reviewed 人工校对 / manual 后台录入 */
+    public String descriptionEnSource;
     @Column(dbType = "jsonb", jdbcType = JDBCType.JAVA_OBJECT,
             typeHandler = PgSQLStringSupportJsonbTypeHandler.class)
     public String customs;

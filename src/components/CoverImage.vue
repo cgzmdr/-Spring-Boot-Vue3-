@@ -14,11 +14,19 @@ const props = withDefaults(
     prompt?: string
     /** 占位模式：theme=色块兜底（快）；ai=AI 生成图（慢，用于 Hero） */
     mode?: 'theme' | 'ai'
+    /**
+     * 图片适配方式：
+     * · cover   —— 铺满容器（默认，列表卡片 / Hero 使用，会裁切）
+     * · natural —— 按图片原始尺寸与比例渲染（不裁切、不拉伸），正文浮动配图使用
+     */
+    fit?: 'cover' | 'natural'
+    /** 加载策略：正文配图用 eager，避免原尺寸模式下未加载时高度为 0 引起布局跳动 */
+    loading?: 'lazy' | 'eager'
     /** AI 图尺寸 */
     size?: string
     alt?: string
   }>(),
-  { src: null, name: '', theme: '#B6402E', prompt: '', mode: 'theme', size: 'landscape_16_9', alt: '' },
+  { src: null, name: '', theme: '#B6402E', prompt: '', mode: 'theme', fit: 'cover', loading: 'lazy', size: 'landscape_16_9', alt: '' },
 )
 
 const aiFailed = ref(false)
@@ -84,7 +92,10 @@ const initial = computed(() => (props.name ? props.name.trim().slice(0, 1) : '')
 </script>
 
 <template>
-  <div class="cover-wrap">
+  <div
+    class="cover-wrap"
+    :class="{ 'is-natural': fit === 'natural', 'is-fallback': showFallback }"
+  >
     <!-- 清晰图：始终渲染以触发加载；加载完成前透明，完成后淡入 -->
     <img
       v-if="showFull"
@@ -92,7 +103,7 @@ const initial = computed(() => (props.name ? props.name.trim().slice(0, 1) : '')
       :class="{ reveal: fullRevealed }"
       :src="src"
       :alt="alt || name"
-      loading="lazy"
+      :loading="loading"
       decoding="async"
       @load="onFullLoad"
       @error="onFullError"
@@ -105,6 +116,7 @@ const initial = computed(() => (props.name ? props.name.trim().slice(0, 1) : '')
       :src="blurSrc"
       :alt="alt || name"
       aria-hidden="true"
+      :loading="loading"
       decoding="async"
     />
     <!-- 兜底色块（无图 / 加载失败时） -->
@@ -158,6 +170,23 @@ const initial = computed(() => (props.name ? props.name.trim().slice(0, 1) : '')
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+/* 原尺寸模式：容器高度由图片自身决定（不裁切 / 不拉伸），文字可环绕其排布 */
+.cover-wrap.is-natural {
+  height: auto;
+  /* 图片尚未就绪时给出最小高度，避免浮动配图塌陷造成布局跳动 */
+  min-height: 90px;
+}
+.cover-wrap.is-natural .cover-full {
+  position: static;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+/* 原尺寸模式下无图（或加载失败）时，兜底色块给定比例，避免高度塌陷 */
+.cover-wrap.is-natural.is-fallback {
+  aspect-ratio: 16 / 10;
 }
 .cover-fallback::after {
   content: "";

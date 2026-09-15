@@ -96,6 +96,8 @@ onMounted(load)
           {{ h.label }}
         </button>
         <button v-if="heritage" class="chip" @click="pickHeritage(heritage)">✕ 清除</button>
+        <span style="flex: 1"></span>
+        <router-link class="chip hd-entry" to="/heritage">📜 进入非遗名录</router-link>
       </div>
     </div>
 
@@ -129,3 +131,17 @@ onMounted(load)
     <el-empty v-else description="暂无艺术数据" style="padding: 48px 0" />
   </div>
 </template>
+
+<style scoped>
+/* 非遗名录入口：与筛选 chip 同形，作为链接可跳转 */
+.hd-entry {
+  text-decoration: none;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.hd-entry:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+</style>

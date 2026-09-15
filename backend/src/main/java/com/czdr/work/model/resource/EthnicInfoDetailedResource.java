@@ -10,8 +10,7 @@ import java.util.List;
  * 民族详情（完整对象）
  */
 @Schema(description = "民族详情（完整对象）")
-public record EthnicInfoDetailedResource(
-    @Schema(description = "民族 ID") String id,
+public record EthnicInfoDetailedResource(    @Schema(description = "民族 ID") String id,
     @Schema(description = "URL 标识") String slug,
     @Schema(description = "民族名") String name,
     @Schema(description = "民族英文名") String nameEn,
@@ -40,6 +39,7 @@ public record EthnicInfoDetailedResource(
     @Schema(description = "聚居地列表") List<EthnicLocation> locations,
     @Schema(description = "民族美食列表") List<Food> foods,
     @Schema(description = "民族节日列表") List<Festival> festivals,
-    @Schema(description = "民族艺术列表") List<Art> arts
+    @Schema(description = "民族艺术列表") List<Art> arts,
+    @Schema(description = "历史沿革结构化（时间轴/时代分期/段落索引，方向 C-2）") EthnicHistoryResource history
 ) {
 }

@@ -16,6 +16,8 @@ public record FestivalQueryInfoResource(
         @Schema(description = "农历日期") String lunarDate,
         @Schema(description = "起源") String origin,
         @Schema(description = "发展沿革（详细）") String description,
+        @Schema(description = "英文正文（方向 C-3；为空时前端回退显示 description）") String descriptionEn,
+        @Schema(description = "英文正文来源：machine/reviewed/manual") String descriptionEnSource,
         @Schema(description = "习俗活动") String[] customs,
         @Schema(description = "图集") String[] images,
         @Schema(description = "封面图") String coverImage

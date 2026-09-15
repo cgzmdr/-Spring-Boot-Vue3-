@@ -28,7 +28,8 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class InteractionServiceImpl implements InteractionService {
-    private static final Set<String> TYPES = Set.of("ethnic", "festival", "art", "topic");
+    private static final Set<String> TYPES = Set.of(
+            "ethnic", "festival", "art", "topic", "food", "discussion_topic", "discussion_post");
 
     private final EasyEntityQuery entityQuery;
 
@@ -170,6 +171,18 @@ public class InteractionServiceImpl implements InteractionService {
                     .where(e -> e.id().eq(entryId)).firstOrNull() != null;
             case "topic" -> entityQuery.queryable(Topic.class)
                     .where(e -> e.id().eq(entryId)).firstOrNull() != null;
+            case "food" -> entityQuery.queryable(Food.class)
+                    .where(e -> e.id().eq(entryId)).firstOrNull() != null;
+            case "discussion_topic" -> entityQuery.queryable(DiscussionTopic.class)
+                    .where(e -> {
+                        e.id().eq(entryId);
+                        e.status().eq("published");
+                    }).firstOrNull() != null;
+            case "discussion_post" -> entityQuery.queryable(DiscussionPost.class)
+                    .where(e -> {
+                        e.id().eq(entryId);
+                        e.status().eq("published");
+                    }).firstOrNull() != null;
             default -> false;
         };
     }
@@ -198,6 +211,22 @@ public class InteractionServiceImpl implements InteractionService {
                 Topic e = entityQuery.queryable(Topic.class)
                         .where(x -> x.id().eq(entryId)).firstOrNull();
                 yield e == null ? new String[]{null, null} : new String[]{e.getTitle(), e.getCoverImage()};
+            }
+            case "food" -> {
+                Food e = entityQuery.queryable(Food.class)
+                        .where(x -> x.id().eq(entryId)).firstOrNull();
+                yield e == null ? new String[]{null, null} : new String[]{e.getName(), e.getImage()};
+            }
+            case "discussion_topic" -> {
+                DiscussionTopic e = entityQuery.queryable(DiscussionTopic.class)
+                        .where(x -> x.id().eq(entryId)).firstOrNull();
+                yield e == null ? new String[]{null, null} : new String[]{e.getTitle(), firstImage(e.getImages())};
+            }
+            case "discussion_post" -> {
+                DiscussionPost e = entityQuery.queryable(DiscussionPost.class)
+                        .where(x -> x.id().eq(entryId)).firstOrNull();
+                yield e == null ? new String[]{null, null}
+                        : new String[]{excerpt(e.getContent()), firstImage(e.getImages())};
             }
             default -> new String[]{null, null};
         };
@@ -245,11 +274,29 @@ public class InteractionServiceImpl implements InteractionService {
                 .firstOrNull();
         if (counter == null) {
             entityQuery.insertable(new LikeCounter(type, entryId, 1L, LocalDateTime.now())).executeRows();
-            return;
+        } else {
+            counter.setCount(Math.max(0, counter.getCount() + delta));
+            counter.setUpdatedAt(LocalDateTime.now());
+            entityQuery.updatable(counter).executeRows();
         }
-        counter.setCount(Math.max(0, counter.getCount() + delta));
-        counter.setUpdatedAt(LocalDateTime.now());
-        entityQuery.updatable(counter).executeRows();
+        // 讨论区帖子/回复额外把点赞数回写到内容行，便于列表展示与热度排序
+        if ("discussion_topic".equals(type)) {
+            DiscussionTopic topic = entityQuery.queryable(DiscussionTopic.class)
+                    .where(t -> t.id().eq(entryId))
+                    .firstOrNull();
+            if (topic != null) {
+                topic.setLikeCount((int) Math.max(0L, (topic.getLikeCount() == null ? 0L : topic.getLikeCount()) + delta));
+                entityQuery.updatable(topic).executeRows();
+            }
+        } else if ("discussion_post".equals(type)) {
+            DiscussionPost post = entityQuery.queryable(DiscussionPost.class)
+                    .where(p -> p.id().eq(entryId))
+                    .firstOrNull();
+            if (post != null) {
+                post.setLikeCount((int) Math.max(0L, (post.getLikeCount() == null ? 0L : post.getLikeCount()) + delta));
+                entityQuery.updatable(post).executeRows();
+            }
+        }
     }
 
     /**
@@ -268,16 +315,54 @@ public class InteractionServiceImpl implements InteractionService {
     private void changeViewCount(String type, UUID entryId, long delta) {
         ViewCounter counter = entityQuery.queryable(ViewCounter.class)
                 .where(c -> {
-                    c.entryType().eq(type);
-                    c.entryId().eq(entryId);
+                    c.or(()->{
+                        c.entryType().eq(type);
+                        c.entryId().eq(entryId);
+                    });
                 })
                 .firstOrNull();
         if (counter == null) {
             entityQuery.insertable(new ViewCounter(type, entryId, 1L, LocalDateTime.now())).executeRows();
-            return;
+        } else {
+            counter.setCount(counter.getCount() + delta);
+            counter.setUpdatedAt(LocalDateTime.now());
+            entityQuery.updatable(counter).executeRows();
         }
-        counter.setCount(counter.getCount() + delta);
-        counter.setUpdatedAt(LocalDateTime.now());
-        entityQuery.updatable(counter).executeRows();
+        // 讨论区帖子额外把浏览量回写到帖子行，便于列表直接展示与热度排序
+        if ("discussion_topic".equals(type)) {
+            DiscussionTopic topic = entityQuery.queryable(DiscussionTopic.class)
+                    .where(t -> t.id().eq(entryId))
+                    .firstOrNull();
+            if (topic != null) {
+                topic.setViewCount(Math.max(0L, (topic.getViewCount() == null ? 0L : topic.getViewCount()) + delta));
+                entityQuery.updatable(topic).executeRows();
+            }
+        }
+    }
+
+    /** 从 JSON 数组字符串中取第一个图片地址（讨论区配图） */
+    private String firstImage(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        int start = json.indexOf('"');
+        if (start < 0) {
+            return null;
+        }
+        int end = json.indexOf('"', start + 1);
+        if (end < 0) {
+            return null;
+        }
+        String value = json.substring(start + 1, end).trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    /** 回复内容摘要（收藏夹展示用） */
+    private String excerpt(String content) {
+        if (content == null) {
+            return null;
+        }
+        String flat = content.replaceAll("\\s+", " ").trim();
+        return flat.length() > 40 ? flat.substring(0, 40) + "…" : flat;
     }
 }

@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 import {
 	ArrowDown,
 	Calendar,
+	ChatDotRound,
 	Collection,
 	DocumentChecked,
 	Expand,
@@ -10,6 +11,7 @@ import {
 	Fold,
 	Headset,
 	Lock,
+	MagicStick,
 	Odometer,
 	Plus,
 	SwitchButton,
@@ -31,6 +33,7 @@ const app = createApp(App);
 const globalIcons = {
 	ArrowDown,
 	Calendar,
+	ChatDotRound,
 	Collection,
 	DocumentChecked,
 	Expand,
@@ -38,6 +41,7 @@ const globalIcons = {
 	Fold,
 	Headset,
 	Lock,
+	MagicStick,
 	Odometer,
 	Plus,
 	SwitchButton,

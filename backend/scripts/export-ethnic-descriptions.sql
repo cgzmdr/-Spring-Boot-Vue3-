@@ -1,0 +1,12 @@
+-- ============================================================================
+-- 历史沿革解析器 · 真实数据校验（方向 C-2）配套导出
+--
+-- 把 ethnic_group 的全文导出为 TSV，供 HistoryParserCheck / HistoryParserReport
+-- 直接对「真实 56 行数据」跑断言（比构造样例更能暴露线上数据问题）。
+--
+-- 用法：
+--   psql -U postgres -h localhost -d 56_app -f scripts/export-ethnic-descriptions.sql
+--   gradlew compileJava
+--   java -cp build/classes/java/main com.czdr.work.HistoryParserCheck scripts/ethnic-descriptions.tsv
+-- ============================================================================
+\copy (SELECT name, description FROM ethnic_group ORDER BY id) TO 'C:/codeDev/56/app/backend/scripts/ethnic-descriptions.tsv' WITH (FORMAT csv, DELIMITER E'\t')

@@ -3,16 +3,38 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import SectionRule from '@/components/SectionRule.vue'
 import CoverImage from '@/components/CoverImage.vue'
+import Reveal from '@/components/Reveal.vue'
 import { ethnicApi } from '@/api/modules'
 import type { EthnicBrief } from '@/api/types'
+import { stagger, fadeUp } from '@/utils/motion'
 
 const router = useRouter()
 const wall = ref<EthnicBrief[]>([])
 
+/** 全家福民族标签错峰浮现（超过 20 个后不再叠加延迟） */
+function wallVariants(index: number) {
+  return fadeUp({ delay: Math.min(index * 18, 360), distance: 10, duration: 460 })
+}
+
 const STORIES = [
-  { title: '文成公主与松赞干布', desc: '汉藏和亲，架起唐蕃友好往来的桥梁，雪域高原自此有了茶马互市。', period: '唐 · 公元 641 年' },
-  { title: '土尔扈特万里东归', desc: '蒙古土尔扈特部冲破沙俄阻挠，行程万里回到祖国怀抱。', period: '清 · 公元 1771 年' },
-  { title: '乌兰牧骑精神', desc: '草原红色文艺轻骑兵，把党的声音送到最后一公里。', period: '1957 年至今' },
+  {
+    title: '文成公主与松赞干布',
+    desc: '汉藏和亲，架起唐蕃友好往来的桥梁，雪域高原自此有了茶马互市。',
+    period: '唐 · 公元 641 年',
+    prompt: 'Tang dynasty princess wedding procession to Tibet, ancient silk road, historical illustration',
+  },
+  {
+    title: '土尔扈特万里东归',
+    desc: '蒙古土尔扈特部冲破沙俄阻挠，行程万里回到祖国怀抱。',
+    period: '清 · 公元 1771 年',
+    prompt: 'Mongolian Torghut tribe migrating east across the steppe, historical illustration',
+  },
+  {
+    title: '乌兰牧骑精神',
+    desc: '草原红色文艺轻骑兵，把党的声音送到最后一公里。',
+    period: '1957 年至今',
+    prompt: 'Ulan Muqir grassland performance troupe, red flag, prairie, photography',
+  },
 ]
 
 const TIMELINE = [
@@ -23,8 +45,16 @@ const TIMELINE = [
 ]
 
 const POLICIES = [
-  { title: '乡村振兴', desc: '民族地区巩固脱贫攻坚成果，接续推进乡村振兴，让各族人民共享发展成果。' },
-  { title: '语言文字保护', desc: '推广国家通用语言文字，同时支持少数民族语言文字的保护与发展。' },
+  {
+    title: '乡村振兴',
+    desc: '民族地区巩固脱贫攻坚成果，接续推进乡村振兴，让各族人民共享发展成果。',
+    prompt: 'rural revitalization in ethnic minority area, terraced fields and new village houses',
+  },
+  {
+    title: '语言文字保护',
+    desc: '推广国家通用语言文字，同时支持少数民族语言文字的保护与发展。',
+    prompt: 'ethnic minority language manuscripts and dictionaries on a desk, warm light',
+  },
 ]
 
 onMounted(async () => {
@@ -66,16 +96,28 @@ function goEthnic(id: string) {
       </figure>
     </div>
 
-    <!-- 01 民族团结故事 -->
+    <!-- 01 民族团结故事（图文并茂） -->
     <section class="section">
       <SectionRule no="01" title="民族团结故事" />
       <div class="grid grid-3 seam">
-        <div v-for="(s, i) in STORIES" :key="i" class="story-panel">
-          <div class="idx">NO. 0{{ i + 1 }}</div>
-          <h4>{{ s.title }}</h4>
-          <p>{{ s.desc }}</p>
-          <div class="period">{{ s.period }}</div>
-        </div>
+        <Reveal
+          v-for="(s, i) in STORIES"
+          :key="i"
+          class="story-panel"
+          tag="article"
+          :delay="stagger(i, 90, 300)"
+          :y="20"
+        >
+          <div class="story-img">
+            <CoverImage mode="ai" :name="s.title" :prompt="s.prompt" :theme="'#B6402E'" size="landscape_4_3" />
+          </div>
+          <div class="story-body">
+            <div class="idx">NO. 0{{ i + 1 }}</div>
+            <h4>{{ s.title }}</h4>
+            <p>{{ s.desc }}</p>
+            <div class="period">{{ s.period }}</div>
+          </div>
+        </Reveal>
       </div>
     </section>
 
@@ -83,7 +125,7 @@ function goEthnic(id: string) {
     <section class="section" style="background: var(--paper-2)">
       <SectionRule no="02" title="历史时间线" />
       <div class="timeline">
-        <div v-for="t in TIMELINE" :key="t.date" class="tl-item">
+        <div v-for="t in TIMELINE" :key="t.date" class="tl-item" v-motion-fade-up>
           <div class="date">{{ t.date }}</div>
           <h5>{{ t.title }}</h5>
           <p>{{ t.desc }}</p>
@@ -91,14 +133,26 @@ function goEthnic(id: string) {
       </div>
     </section>
 
-    <!-- 03 政策解读 -->
+    <!-- 03 政策解读（图文并茂） -->
     <section class="section">
       <SectionRule no="03" title="政策解读" />
       <div class="grid grid-2 seam">
-        <div v-for="(p, i) in POLICIES" :key="i" class="policy-panel">
-          <h4>{{ p.title }}</h4>
-          <p>{{ p.desc }}</p>
-        </div>
+        <Reveal
+          v-for="(p, i) in POLICIES"
+          :key="i"
+          class="policy-panel"
+          tag="article"
+          :delay="stagger(i, 90, 300)"
+          :y="20"
+        >
+          <div class="policy-img">
+            <CoverImage mode="ai" :name="p.title" :prompt="p.prompt" :theme="'#B6402E'" size="landscape_16_9" />
+          </div>
+          <div class="policy-body">
+            <h4>{{ p.title }}</h4>
+            <p>{{ p.desc }}</p>
+          </div>
+        </Reveal>
       </div>
     </section>
 
@@ -106,7 +160,14 @@ function goEthnic(id: string) {
     <section class="section">
       <SectionRule no="04" title="56 民族全家福" />
       <div class="wall">
-        <button v-for="e in wall" :key="e.id" class="w-chip" :style="{ borderColor: e.themeColor }" @click="goEthnic(e.id)">
+        <button
+          v-for="(e, i) in wall"
+          :key="e.id"
+          class="w-chip"
+          :style="{ borderColor: e.themeColor }"
+          v-motion="wallVariants(i)"
+          @click="goEthnic(e.id)"
+        >
           {{ e.name }}
         </button>
       </div>
@@ -121,7 +182,25 @@ function goEthnic(id: string) {
 .story-panel,
 .policy-panel {
   background: var(--paper);
-  padding: 30px 34px;
+  overflow: hidden;
+}
+.story-body,
+.policy-body {
+  padding: 24px 30px 30px;
+}
+.story-img,
+.policy-img {
+  overflow: hidden;
+  background: var(--paper-2);
+  aspect-ratio: 16 / 10;
+}
+.story-img :deep(img),
+.story-img :deep(.cover-fallback),
+.policy-img :deep(img),
+.policy-img :deep(.cover-fallback) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .story-panel .idx {
   font-family: var(--serif);
@@ -132,19 +211,19 @@ function goEthnic(id: string) {
 .story-panel h4,
 .policy-panel h4 {
   font-family: var(--serif);
-  font-size: 22px;
-  letter-spacing: 1px;
+  font-size: 21px;
+  letter-spacing: 0.04em;
   margin: 10px 0 10px;
 }
 .story-panel p,
 .policy-panel p {
-  font-size: 14px;
+  font-size: 14.5px;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.85;
 }
 .story-panel .period {
   font-size: 11px;
-  letter-spacing: 2px;
+  letter-spacing: 0.12em;
   color: var(--accent);
   text-transform: uppercase;
   margin-top: 14px;

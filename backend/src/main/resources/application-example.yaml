@@ -43,3 +43,31 @@ app:
   cors:
     # 允许跨域的前端地址（C 端 / 管理端 dev server）
     allowed-origins: http://localhost:5173,http://localhost:5273
+  notify:
+    # 社区通知邮件通道：按产品决策开启，但仅「审核结果」会自动发信；
+    # 网站公告由后台 OA 群发接口按次指定是否发邮件。
+    # 注意：这里的 SMTP 为真实账号，测试请用可真实收信的邮箱或临时置为 false。
+    email-enabled: true
+    # 公告群发单次收件人上限 / 「活跃用户」受众的判定窗口（天）
+    broadcast-max-recipients: 2000
+    active-window-days: 30
+  translate:
+    # 机器翻译（默认「词表优先 + AI 兜底」，都不依赖商业翻译 API）：
+    #   glossary 本地文化词表（存库、后台可维护）| spring-ai（AiConfig 的 ChatClient，走 spring.ai.openai.*）
+    #   | libretranslate | ollama | none（关闭，前端隐藏「译」按钮）
+    provider: glossary
+    # 主提供方失败（超时 / 额度 / 断网 / 词表覆盖率不足）时的兜底提供方；none 表示仅显示原文
+    fallback-provider: spring-ai
+    # 词表可接受的最低覆盖率（低于则让给兜底提供方，避免展示半截混杂文本）
+    glossary-min-coverage: 0.8
+    # AI 翻译时把译文里的文化术语实时沉淀进词表（只新增、不覆盖）
+    auto-glossary-enabled: true
+    auto-glossary-max-terms: 8
+    # 自托管服务地址，如 http://127.0.0.1:5000（LibreTranslate）/ http://127.0.0.1:11434（Ollama）
+    base-url: ""
+    # 可选（LibreTranslate 支持）；Ollama 使用的本地模型名（spring-ai 的模型见 spring.ai.openai.chat.model）
+    api-key: ""
+    model: qwen2.5:7b
+    timeout-seconds: 8
+    max-chars: 4000
+    cache-enabled: true

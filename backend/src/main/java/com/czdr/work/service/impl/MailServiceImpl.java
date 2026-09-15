@@ -54,6 +54,21 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
+    public void sendHtml(String to, String subject, String html) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(html == null ? "" : html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("邮件发送失败", e);
+        }
+    }
+
+    @Override
     public boolean verifyCode(String account, String code) {
         if (code == null || account == null) {
             return false;

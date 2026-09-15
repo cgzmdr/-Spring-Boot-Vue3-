@@ -121,6 +121,10 @@ export default function ProfileScreen() {
 
             {/* 菜单 */}
             <View style={styles.menu}>
+              <Pressable style={styles.menuRow} onPress={() => navigation.navigate('Interests')}>
+                <Text style={styles.menuLabel}>{t('profile.interests')}</Text>
+                <Text style={styles.menuArrow}>→</Text>
+              </Pressable>
               <Pressable style={styles.menuRow} onPress={() => navigation.navigate('About')}>
                 <Text style={styles.menuLabel}>{t('profile.about')}</Text>
                 <Text style={styles.menuArrow}>→</Text>

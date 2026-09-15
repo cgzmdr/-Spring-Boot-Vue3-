@@ -48,4 +48,14 @@ public class RedisServiceImpl implements RedisService {
     public Boolean delete(String key) {
         return redisTemplate.delete(key);
     }
+
+    @Override
+    public long increment(String key, long timeoutSeconds) {
+        Long value = redisTemplate.opsForValue().increment(key);
+        long current = value == null ? 0L : value;
+        if (current <= 1L && timeoutSeconds > 0) {
+            redisTemplate.expire(key, timeoutSeconds, TimeUnit.SECONDS);
+        }
+        return current;
+    }
 }
