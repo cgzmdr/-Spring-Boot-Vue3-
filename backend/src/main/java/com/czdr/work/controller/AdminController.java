@@ -6,11 +6,14 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import com.czdr.work.comment.resource.Result;
 import com.czdr.work.model.entity.*;
 import com.czdr.work.model.request.AdminUserSaveRequest;
+import com.czdr.work.model.request.ReviewApproveRequest;
 import com.czdr.work.model.request.ReviewRejectRequest;
+import com.czdr.work.model.request.ReviewReviseRequest;
 import com.czdr.work.model.resource.ContentStatsResource;
 import com.czdr.work.model.resource.StatsOverviewResource;
 import com.czdr.work.service.AdminService;
 import com.czdr.work.service.FormService;
+import com.czdr.work.service.WorkflowService;
 import com.easy.query.core.api.pagination.EasyPageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -35,6 +38,7 @@ import java.util.UUID;
 public class AdminController {
     private final AdminService adminService;
     private final FormService formService;
+    private final WorkflowService workflowService;
 
     @Operation(summary = "新增民族", description = "新增民族内容（需 ethnic:create 权限）")
     @SaCheckPermission("ethnic:create")
@@ -246,14 +250,15 @@ public class AdminController {
         return Result.success(formService.list(keyword, status, pageable));
     }
 
-    @Operation(summary = "审核列表", description = "分页查询待审内容，可按审核状态筛选（需 review:list 权限）")
+    @Operation(summary = "审核列表", description = "分页查询内容审核态快照，可按审核状态与内容类型筛选（需 review:list 权限）")
     @SaCheckPermission("review:list")
     @GetMapping("reviews")
     Result<EasyPageResult<ContentReview>> listReviews(
-            @RequestParam(value = "status", required = false) @Parameter(description = "审核状态：pending / approved / rejected，为空返回全部") String status,
+            @RequestParam(value = "status", required = false) @Parameter(description = "审核状态：pending / approved / rejected / offline / revising，为空返回全部") String status,
+            @RequestParam(value = "entryType", required = false) @Parameter(description = "内容类型：ethnic / festival / art / topic") String entryType,
             @PageableDefault(page = 0, size = 10, sort = "submittedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return Result.success(adminService.listReviews(status, pageable));
+        return Result.success(adminService.listReviews(status, entryType, pageable));
     }
 
     @SaCheckRole("super_admin")
@@ -262,22 +267,62 @@ public class AdminController {
         adminService.initReview();
     }
 
-    @Operation(summary = "审核通过", description = "通过指定内容的审核并发布（需 review:approve 权限）")
+    @Operation(summary = "审核员审批通过", description = "审核员通过审批（需填审批意见），内容上线并流转到内容管理员审查（需 review:approve 权限）")
     @SaCheckPermission("review:approve")
     @PostMapping("reviews/{id}/approve")
-    Result<Void> approveReview(@PathVariable @Parameter(description = "审核记录 ID") String id) {
-        adminService.approveReview(id);
+    Result<Void> approveReview(@PathVariable @Parameter(description = "工作流实例 ID") String id,
+                               @RequestBody(required = false) ReviewApproveRequest request) {
+        adminService.approveReview(id, request == null ? null : request.opinion());
         return Result.success(null);
     }
 
     /**
-     * 审核驳回
+     * 审核驳回（退回内容编辑修改）
      */
-    @Operation(summary = "审核驳回", description = "驳回指定内容，可附驳回原因（需 review:reject 权限）")
+    @Operation(summary = "审核退回", description = "审核员退回内容交内容编辑修改，需附审批意见（需 review:reject 权限）")
     @SaCheckPermission("review:reject")
     @PostMapping("reviews/{id}/reject")
-    Result<Void> rejectReview(@PathVariable @Parameter(description = "审核记录 ID") String id, @RequestBody(required = false) ReviewRejectRequest request) {
+    Result<Void> rejectReview(@PathVariable @Parameter(description = "工作流实例 ID") String id, @RequestBody(required = false) ReviewRejectRequest request) {
         adminService.rejectReview(id, request == null ? null : request.reason());
+        return Result.success(null);
+    }
+
+    @Operation(summary = "内容管理员审查通过", description = "审查无问题，内容保持在线，本轮闭环结束（需 review:inspect 权限）")
+    @SaCheckPermission("review:inspect")
+    @PostMapping("reviews/{id}/inspect/pass")
+    Result<Void> inspectPass(@PathVariable @Parameter(description = "工作流实例 ID") String id,
+                             @RequestBody(required = false) ReviewApproveRequest request) {
+        adminService.inspectPass(id, request == null ? null : request.opinion());
+        return Result.success(null);
+    }
+
+    @Operation(summary = "内容管理员审查发现问题并暂时下线", description = "内容暂时下线并交内容编辑修改，需附审查意见（需 review:offline 权限）")
+    @SaCheckPermission("review:offline")
+    @PostMapping("reviews/{id}/inspect/issue")
+    Result<Void> inspectIssue(@PathVariable @Parameter(description = "工作流实例 ID") String id,
+                              @RequestBody ReviewRejectRequest request) {
+        adminService.inspectIssue(id, request == null ? null : request.reason());
+        return Result.success(null);
+    }
+
+    @Operation(summary = "内容编辑修改完成并重新提交审批", description = "内容编辑填写修改说明，重新提交审核员二次审批（需登录）")
+    @SaCheckLogin
+    @PostMapping("reviews/{id}/revise")
+    Result<Void> revise(@PathVariable @Parameter(description = "工作流实例 ID") String id,
+                        @RequestBody(required = false) ReviewReviseRequest request) {
+        boolean needReapproval = request == null || request.needReapproval() == null || request.needReapproval();
+        adminService.reviseAndResubmit(id, request == null ? null : request.revisionNote(), needReapproval);
+        return Result.success(null);
+    }
+
+    @Operation(summary = "内容提交审批", description = "按内容类型与内容 ID 提交审批，流程实例启动并进入待审批（需对应内容类型的 update 权限）")
+    @SaCheckLogin
+    @PostMapping("reviews/submit")
+    Result<Void> submitReview(
+            @RequestParam @Parameter(description = "内容类型：ethnic / festival / art / topic") String entryType,
+            @RequestParam @Parameter(description = "内容 ID") UUID entryId,
+            @RequestParam(required = false) @Parameter(description = "提交说明") String note) {
+        workflowService.submit(entryType, entryId, note);
         return Result.success(null);
     }
 

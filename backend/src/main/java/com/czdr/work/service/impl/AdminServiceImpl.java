@@ -6,10 +6,14 @@ import com.czdr.work.comment.exception.ErrorCode;
 import com.czdr.work.config.AesCbcEncryptor;
 import com.czdr.work.model.entity.*;
 import com.czdr.work.model.entity.proxy.UserAuthProxy;
+import com.czdr.work.model.enums.WorkflowConstants;
 import com.czdr.work.model.request.AdminUserSaveRequest;
+import com.czdr.work.model.request.WorkflowTaskCompleteRequest;
 import com.czdr.work.model.resource.ContentStatsResource;
 import com.czdr.work.model.resource.StatsOverviewResource;
 import com.czdr.work.service.AdminService;
+import com.czdr.work.service.WorkflowContentGateway;
+import com.czdr.work.service.WorkflowService;
 import com.czdr.work.util.RegexValidatorUtil;
 import com.easy.query.api.proxy.client.EasyEntityQuery;
 import com.easy.query.core.api.pagination.EasyPageResult;
@@ -40,6 +44,12 @@ public class AdminServiceImpl implements AdminService {
 
     private final EasyEntityQuery entityQuery;
     private final AesCbcEncryptor aesCbcEncryptor;
+    /** 内容审批工作流（Camunda 7 嵌入式引擎）：审核动作全部委托给它 */
+    private final WorkflowService workflowService;
+    /** 内容状态读写适配层（工作流与内容表解耦） */
+    private final WorkflowContentGateway contentGateway;
+    /** 只读目录缓存：内容写操作后需失效，避免 C 端读到过期聚合结果 */
+    private final com.czdr.work.config.ReadCache readCache;
 
     // ==================== 民族 ====================
 
@@ -47,21 +57,38 @@ public class AdminServiceImpl implements AdminService {
     public void createEthnicGroup(EthnicGroup body) {
         body.setId(UUID.randomUUID());
         if (body.getStatus() == null || body.getStatus().isBlank()) {
-            body.setStatus("draft");
+            body.setStatus(WorkflowConstants.CONTENT_DRAFT);
         }
+        body.setContentVersion(0);
         body.setCreatedAt(LocalDateTime.now());
         body.setUpdatedAt(LocalDateTime.now());
         entityQuery.insertable(body).executeRows();
     }
 
+    /**
+     * 编辑民族内容。
+     * <p>审批过程中（内容状态 pending）由 Camunda 流程掌管状态，这里**不再**用请求体里的 status
+     * 覆盖，避免内容编辑在修改环节顺手把状态改成 published 绕过审批。</p>
+     * <p>非审批态时保留原有的「按状态同步审核表」行为，兼容后台直接改状态的运维场景。</p>
+     */
     @Override
     public void updateEthnicGroup(String id, EthnicGroup body) {
         EthnicGroup target = getEthnicGroup(id);
         String oldStatus = target.getStatus();
+        boolean inFlow = WorkflowConstants.CONTENT_PENDING.equals(oldStatus);
+        String requestedStatus = body.getStatus();
+        if (inFlow) {
+            body.setStatus(null);
+        }
         copyNonNull(body, target);
         target.setUpdatedAt(LocalDateTime.now());
         entityQuery.updatable(target).executeRows();
-        syncReviewStatus("ethnic", target.getId(), body.getStatus(), oldStatus);
+        if (!inFlow) {
+            syncReviewSnapshot("ethnic", target.getId(), requestedStatus, oldStatus);
+        }
+        // 民族表的字段（名称/人口/语系/地域）直接参与人口统计与列表指标聚合，
+        // 改完必须让只读缓存失效，否则 C 端最长脏一个 TTL 周期。
+        readCache.invalidateAll();
     }
 
     @Override
@@ -69,6 +96,9 @@ public class AdminServiceImpl implements AdminService {
         EthnicGroup target = getEthnicGroup(id);
         entityQuery.deletable(target).allowDeleteStatement(true).executeRows();
         deleteReviewRecord("ethnic", target.getId());
+        workflowService.onContentDeleted("ethnic", target.getId());
+        // 删除会同时改变列表与人口统计，立即失效缓存
+        readCache.invalidateAll();
     }
 
     @Override
@@ -108,8 +138,9 @@ public class AdminServiceImpl implements AdminService {
     public void createFestival(Festival body) {
         body.setId(UUID.randomUUID());
         if (body.getStatus() == null || body.getStatus().isBlank()) {
-            body.setStatus("draft");
+            body.setStatus(WorkflowConstants.CONTENT_DRAFT);
         }
+        body.setContentVersion(0);
         body.setCreatedAt(LocalDateTime.now());
         body.setUpdatedAt(LocalDateTime.now());
         entityQuery.insertable(body).executeRows();
@@ -119,10 +150,17 @@ public class AdminServiceImpl implements AdminService {
     public void updateFestival(String id, Festival body) {
         Festival target = getFestival(id);
         String oldStatus = target.getStatus();
+        boolean inFlow = WorkflowConstants.CONTENT_PENDING.equals(oldStatus);
+        String requestedStatus = body.getStatus();
+        if (inFlow) {
+            body.setStatus(null);
+        }
         copyNonNull(body, target);
         target.setUpdatedAt(LocalDateTime.now());
         entityQuery.updatable(target).executeRows();
-        syncReviewStatus("festival", target.getId(), body.getStatus(), oldStatus);
+        if (!inFlow) {
+            syncReviewSnapshot("festival", target.getId(), requestedStatus, oldStatus);
+        }
     }
 
     @Override
@@ -130,6 +168,7 @@ public class AdminServiceImpl implements AdminService {
         Festival target = getFestival(id);
         entityQuery.deletable(target).allowDeleteStatement(true).executeRows();
         deleteReviewRecord("festival", target.getId());
+        workflowService.onContentDeleted("festival", target.getId());
     }
 
     @Override
@@ -165,8 +204,9 @@ public class AdminServiceImpl implements AdminService {
     public void createArt(Art body) {
         body.setId(UUID.randomUUID());
         if (body.getStatus() == null || body.getStatus().isBlank()) {
-            body.setStatus("draft");
+            body.setStatus(WorkflowConstants.CONTENT_DRAFT);
         }
+        body.setContentVersion(0);
         body.setCreatedAt(LocalDateTime.now());
         body.setUpdatedAt(LocalDateTime.now());
         entityQuery.insertable(body).executeRows();
@@ -176,10 +216,17 @@ public class AdminServiceImpl implements AdminService {
     public void updateArt(String id, Art body) {
         Art target = getArt(id);
         String oldStatus = target.getStatus();
+        boolean inFlow = WorkflowConstants.CONTENT_PENDING.equals(oldStatus);
+        String requestedStatus = body.getStatus();
+        if (inFlow) {
+            body.setStatus(null);
+        }
         copyNonNull(body, target);
         target.setUpdatedAt(LocalDateTime.now());
         entityQuery.updatable(target).executeRows();
-        syncReviewStatus("art", target.getId(), body.getStatus(), oldStatus);
+        if (!inFlow) {
+            syncReviewSnapshot("art", target.getId(), requestedStatus, oldStatus);
+        }
     }
 
     @Override
@@ -187,6 +234,7 @@ public class AdminServiceImpl implements AdminService {
         Art target = getArt(id);
         entityQuery.deletable(target).allowDeleteStatement(true).executeRows();
         deleteReviewRecord("art", target.getId());
+        workflowService.onContentDeleted("art", target.getId());
     }
 
     @Override
@@ -225,8 +273,9 @@ public class AdminServiceImpl implements AdminService {
             body.setSlug(generateTopicSlug(body.getTitle()));
         }
         if (body.getStatus() == null || body.getStatus().isBlank()) {
-            body.setStatus("draft");
+            body.setStatus(WorkflowConstants.CONTENT_DRAFT);
         }
+        body.setContentVersion(0);
         body.setCreatedAt(LocalDateTime.now());
         body.setUpdatedAt(LocalDateTime.now());
         entityQuery.insertable(body).executeRows();
@@ -236,13 +285,20 @@ public class AdminServiceImpl implements AdminService {
     public void updateTopic(String id, Topic body) {
         Topic target = getTopic(id);
         String oldStatus = target.getStatus();
+        boolean inFlow = WorkflowConstants.CONTENT_PENDING.equals(oldStatus);
+        String requestedStatus = body.getStatus();
+        if (inFlow) {
+            body.setStatus(null);
+        }
         copyNonNull(body, target);
         if (target.getSlug() == null || target.getSlug().isBlank()) {
             target.setSlug(generateTopicSlug(target.getTitle()));
         }
         target.setUpdatedAt(LocalDateTime.now());
         entityQuery.updatable(target).executeRows();
-        syncReviewStatus("topic", target.getId(), body.getStatus(), oldStatus);
+        if (!inFlow) {
+            syncReviewSnapshot("topic", target.getId(), requestedStatus, oldStatus);
+        }
     }
 
     /** 生成 URL 友好且唯一的专题 slug（中英文标题均可） */
@@ -263,6 +319,7 @@ public class AdminServiceImpl implements AdminService {
         Topic target = getTopic(id);
         entityQuery.deletable(target).allowDeleteStatement(true).executeRows();
         deleteReviewRecord("topic", target.getId());
+        workflowService.onContentDeleted("topic", target.getId());
     }
 
     @Override
@@ -292,124 +349,135 @@ public class AdminServiceImpl implements AdminService {
         return entity;
     }
 
-    // ==================== 审核 ====================
+    // ==================== 审核（内容审批工作流） ====================
 
     @Override
-    public EasyPageResult<ContentReview> listReviews(String status, Pageable pageable) {
-        // 审核内容单独为一个表    其他实体状态需要同步至该表
+    public EasyPageResult<ContentReview> listReviews(String status, String entryType, Pageable pageable) {
         return entityQuery.queryable(ContentReview.class)
                 .where(r -> {
                     if (status != null && !status.isBlank()) {
                         r.status().eq(status);
+                    }
+                    if (entryType != null && !entryType.isBlank()) {
+                        r.entryType().eq(entryType);
                     }
                 })
                 .orderBy(r -> r.submittedAt().desc())
                 .toPageResult(pageable.getPageNumber(), pageable.getPageSize());
     }
 
+    /**
+     * 解析工作流实例 ID。
+     * <p>前端历史上传的是 content_review.id，工作流改造后传 workflow_instance.id。
+     * 这里两种都兼容：先按实例 ID 找，找不到再按审核记录 ID 反查其绑定的实例，
+     * 避免旧页面/旧收藏链接直接 404。</p>
+     */
+    private UUID resolveInstanceId(String id) {
+        UUID raw;
+        try {
+            raw = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "ID 格式错误: " + id);
+        }
+        boolean isInstance = entityQuery.queryable(WorkflowInstance.class)
+                .where(i -> i.id().eq(raw)).firstOrNull() != null;
+        if (isInstance) {
+            return raw;
+        }
+        ContentReview review = entityQuery.queryable(ContentReview.class)
+                .where(r -> r.id().eq(raw)).firstOrNull();
+        if (review == null || review.getInstanceId() == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "找不到对应的审批流程实例: " + id);
+        }
+        return review.getInstanceId();
+    }
+
     @Override
     @Transactional
-    public void approveReview(String id) {
-        ContentReview review = getReview(id);
-        if ("approved".equals(review.getStatus())) {
-            throw new BusinessException(ErrorCode.REPEATED_OPERATION, "该内容已审核通过");
+    public void approveReview(String id, String opinion) {
+        if (opinion == null || opinion.isBlank()) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "请填写审批意见");
         }
-        review.setStatus("approved");
-        review.setReviewerId(UUID.fromString(StpUtil.getLoginIdAsString()));
-        review.setReviewedAt(LocalDateTime.now());
-        entityQuery.updatable(review).executeRows();
-        updateTargetStatus(review.getEntryType(), review.getEntryId(), "published");
+        workflowService.completeTask(resolveInstanceId(id),
+                new WorkflowTaskCompleteRequest(WorkflowConstants.DECISION_APPROVED, opinion, null, null, null));
     }
 
     @Override
     @Transactional
     public void rejectReview(String id, String reason) {
-        ContentReview review = getReview(id);
-        if ("rejected".equals(review.getStatus())) {
-            throw new BusinessException(ErrorCode.REPEATED_OPERATION, "该内容已驳回");
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "请填写驳回（退回）意见");
         }
-        review.setStatus("rejected");
-        review.setReviewerId(UUID.fromString(StpUtil.getLoginIdAsString()));
-        review.setRejectReason(reason);
-        review.setReviewedAt(LocalDateTime.now());
-        entityQuery.updatable(review).executeRows();
-        updateTargetStatus(review.getEntryType(), review.getEntryId(), "draft");
+        workflowService.completeTask(resolveInstanceId(id),
+                new WorkflowTaskCompleteRequest(WorkflowConstants.DECISION_REJECTED, reason, reason, null, null));
     }
 
-    private ContentReview getReview(String id) {
-        ContentReview review = entityQuery.queryable(ContentReview.class)
-                .where(r -> r.id().eq(UUID.fromString(id)))
-                .firstOrNull();
-        if (review == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND);
-        }
-        return review;
+    @Override
+    @Transactional
+    public void inspectPass(String id, String opinion) {
+        workflowService.inspectPass(resolveInstanceId(id), opinion);
+    }
+
+    @Override
+    @Transactional
+    public void inspectIssue(String id, String reason) {
+        workflowService.inspectIssueAndOffline(resolveInstanceId(id), reason);
+    }
+
+    @Override
+    @Transactional
+    public void reviseAndResubmit(String id, String revisionNote, boolean needReapproval) {
+        workflowService.reviseAndResubmit(resolveInstanceId(id), revisionNote, needReapproval);
     }
 
     /**
-     * 审核通过/驳回后同步目标内容的状态
+     * 审核通过/驳回后同步目标内容的状态。
+     * <p>保留给历史数据修复使用；正常工作流下内容状态由 Camunda job worker 写回。</p>
      */
     private void updateTargetStatus(String entryType, UUID entryId, String status) {
-        switch (entryType) {
-            case "ethnic" -> {
-                EthnicGroup e = entityQuery.queryable(EthnicGroup.class)
-                        .where(x -> x.id().eq(entryId)).firstOrNull();
-                if (e != null) {
-                    e.setStatus(status);
-                    entityQuery.updatable(e).executeRows();
-                }
-            }
-            case "festival" -> {
-                Festival f = entityQuery.queryable(Festival.class)
-                        .where(x -> x.id().eq(entryId)).firstOrNull();
-                if (f != null) {
-                    f.setStatus(status);
-                    entityQuery.updatable(f).executeRows();
-                }
-            }
-            case "art" -> {
-                Art a = entityQuery.queryable(Art.class)
-                        .where(x -> x.id().eq(entryId)).firstOrNull();
-                if (a != null) {
-                    a.setStatus(status);
-                    entityQuery.updatable(a).executeRows();
-                }
-            }
-            case "topic" -> {
-                Topic t = entityQuery.queryable(Topic.class)
-                        .where(x -> x.id().eq(entryId)).firstOrNull();
-                if (t != null) {
-                    t.setStatus(status);
-                    entityQuery.updatable(t).executeRows();
-                }
-            }
-            default -> {
-            }
-        }
+        contentGateway.updateStatus(entryType, entryId, status);
     }
 
     /**
-     * 内容状态 -> 审核状态 映射。
-     * <p>content_review 表只保留审核流程状态：pending 待审核 / approved 已通过 / rejected 已驳回。
-     * 内容状态 draft（草稿）/ rejected（已驳回）统一对应 rejected，published（已发布）对应 approved。</p>
+     * 内容状态 -> 审核态快照（content_review.status）映射。
+     * <ul>
+     *   <li>pending   待审批</li>
+     *   <li>published 已通过（在线）</li>
+     *   <li>offline   审查发现问题已暂时下线</li>
+     *   <li>revising  已退回内容编辑修改</li>
+     *   <li>rejected  已驳回</li>
+     * </ul>
      */
     private String toReviewStatus(String contentStatus) {
         if (contentStatus == null) {
             return null;
         }
         return switch (contentStatus) {
-            case "pending" -> "pending";
-            case "published" -> "approved";
-            case "draft", "rejected" -> "rejected";
+            case WorkflowConstants.CONTENT_PENDING -> WorkflowConstants.REVIEW_PENDING;
+            case WorkflowConstants.CONTENT_PUBLISHED -> WorkflowConstants.REVIEW_APPROVED;
+            case WorkflowConstants.CONTENT_OFFLINE -> WorkflowConstants.REVIEW_OFFLINE;
+            case WorkflowConstants.CONTENT_REJECTED -> WorkflowConstants.REVIEW_REVISING;
+            case WorkflowConstants.CONTENT_DRAFT -> WorkflowConstants.REVIEW_REJECTED;
             default -> null;
         };
     }
 
+    /** 删除内容时同步删除其审核记录，避免 content_review 残留孤儿数据 */
+    private void deleteReviewRecord(String entryType, UUID entryId) {
+        entityQuery.deletable(ContentReview.class)
+                .allowDeleteStatement(true)
+                .where(r -> {
+                    r.entryType().eq(entryType);
+                    r.entryId().eq(entryId);
+                })
+                .executeRows();
+    }
+
     /**
-     * 修改民族/节日/艺术/专题状态后同步审核表（content_review）状态：
-     * 已有审核记录则更新状态，不存在则按新状态补齐一条记录；状态字段为空或未变化时跳过。
+     * 后台直接修改内容状态时，同步审核表快照（非审批流程路径）。
+     * <p>状态为空或未变化时跳过，避免前台保存草稿时把审核态带偏。</p>
      */
-    private void syncReviewStatus(String entryType, UUID entryId, String newStatus, String oldStatus) {
+    private void syncReviewSnapshot(String entryType, UUID entryId, String newStatus, String oldStatus) {
         if (newStatus == null || newStatus.isBlank() || newStatus.equals(oldStatus)) {
             return;
         }
@@ -430,17 +498,6 @@ public class AdminServiceImpl implements AdminService {
             review.setStatus(reviewStatus);
             entityQuery.updatable(review).executeRows();
         }
-    }
-
-    /** 删除内容时同步删除其审核记录，避免 content_review 残留孤儿数据 */
-    private void deleteReviewRecord(String entryType, UUID entryId) {
-        entityQuery.deletable(ContentReview.class)
-                .allowDeleteStatement(true)
-                .where(r -> {
-                    r.entryType().eq(entryType);
-                    r.entryId().eq(entryId);
-                })
-                .executeRows();
     }
 
     // ==================== 用户 ====================
@@ -922,9 +979,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     /**
-     * 全量重建审核记录（同步审核信息）：
-     * 清空 content_review 后按当前民族/节日/艺术/专题内容重新生成，
-     * 审核状态与内容状态保持一致映射，同时清理历史脏状态与孤儿记录。
+     * 全量重建审核记录（对齐工作流实例）：
+     * 清空 content_review 后按「内容是否存在活跃工作流实例」重建，
+     * 状态取实例当前环节映射，避免出现「内容已下线但审核表显示已通过」这类不一致。
      */
     @Override
     @Transactional
@@ -935,24 +992,46 @@ public class AdminServiceImpl implements AdminService {
                 .where(r -> r.entryType().in(List.of("art", "topic", "festival", "ethnic")))
                 .executeRows();
 
-        entityQuery.queryable(Art.class).toList()
-                .forEach(art -> insertReview("art", art.getId(), art.getStatus()));
-        entityQuery.queryable(Topic.class).toList()
-                .forEach(topic -> insertReview("topic", topic.getId(), topic.getStatus()));
-        entityQuery.queryable(Festival.class).toList()
-                .forEach(festival -> insertReview("festival", festival.getId(), festival.getStatus()));
-        entityQuery.queryable(EthnicGroup.class).toList()
-                .forEach(ethnicGroup -> insertReview("ethnic", ethnicGroup.getId(), ethnicGroup.getStatus()));
+        for (String entryType : List.of("art", "topic", "festival", "ethnic")) {
+            List<UUID> ids = switch (entryType) {
+                case "art" -> entityQuery.queryable(Art.class).toList()
+                        .stream().map(Art::getId).toList();
+                case "topic" -> entityQuery.queryable(Topic.class).toList()
+                        .stream().map(Topic::getId).toList();
+                case "festival" -> entityQuery.queryable(Festival.class).toList()
+                        .stream().map(Festival::getId).toList();
+                default -> entityQuery.queryable(EthnicGroup.class).toList()
+                        .stream().map(EthnicGroup::getId).toList();
+            };
+            for (UUID id : ids) {
+                rebuildReviewRow(entryType, id);
+            }
+        }
     }
 
-    /** 按内容状态插入一条审核记录（状态无映射时跳过） */
-    private void insertReview(String entryType, UUID entryId, String contentStatus) {
+    /** 按活跃工作流实例 + 内容状态重建一条审核记录 */
+    private void rebuildReviewRow(String entryType, UUID entryId) {
+        WorkflowInstance instance = entityQuery.queryable(WorkflowInstance.class)
+                .where(i -> {
+                    i.entryType().eq(entryType);
+                    i.entryId().eq(entryId);
+                })
+                .orderBy(i -> i.contentVersion().desc())
+                .firstOrNull();
+        String contentStatus = contentGateway.load(entryType, entryId).status();
         String reviewStatus = toReviewStatus(contentStatus);
         if (reviewStatus == null) {
             return;
         }
-        entityQuery.insertable(new ContentReview(UUID.randomUUID(), entryType, entryId, reviewStatus))
-                .executeRows();
+        ContentReview review = new ContentReview(UUID.randomUUID(), entryType, entryId, reviewStatus);
+        if (instance != null) {
+            review.setInstanceId(instance.getId());
+            review.setContentVersion(instance.getContentVersion());
+            review.setSubmitterId(instance.getSubmitterId());
+            review.setSubmittedAt(instance.getStartedAt());
+            review.setReviewedAt(instance.getFinishedAt());
+        }
+        entityQuery.insertable(review).executeRows();
     }
 
     private ContentStatsResource ethnicStats() {

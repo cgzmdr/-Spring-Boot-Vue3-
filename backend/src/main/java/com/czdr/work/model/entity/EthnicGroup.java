@@ -57,6 +57,8 @@ public class EthnicGroup implements ProxyEntityAvailable<EthnicGroup, EthnicGrou
             typeHandler = PgSQLStringSupportJsonbTypeHandler.class)
     public String tags;
     public String status;
+    /** 内容版本号：每提交一次审批 +1，审批/审查意见按该版本归档 */
+    public Integer contentVersion;
     public Integer orderNum;
     public UUID createdBy;
     public UUID updatedBy;

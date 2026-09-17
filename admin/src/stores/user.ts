@@ -12,6 +12,22 @@ export const useUserStore = defineStore('user', () => {
 
   const isLoggedIn = computed(() => !!token.value)
 
+  /**
+   * 从 localStorage 同步 token。
+   *
+   * 为什么需要它：`token` 只在 store **首次创建**时读一次 localStorage。
+   * 若外部（另一个标签页、自动化脚本、或守卫之前的一次 fetch 登录）写了 satoken，
+   * 已存在的 store 实例不会自动感知，`isLoggedIn` 会一直是 false，
+   * 表现为「明明有 token 却反复被弹回登录页」。进入路由守卫前显式同步即可消除该竞态。
+   */
+  function syncTokenFromStorage() {
+    const stored = localStorage.getItem(TOKEN_KEY) || ''
+    if (stored !== token.value) {
+      token.value = stored
+    }
+    return token.value
+  }
+
   /** 登录：openapi 契约登录响应 data 为字符串 token */
   async function login(account: string, password: string) {
     const tk = await loginApi({ account, password })
@@ -64,6 +80,7 @@ export const useUserStore = defineStore('user', () => {
     fetchUserInfo,
     logout,
     reset,
-    hasRole
+    hasRole,
+    syncTokenFromStorage
   }
 })

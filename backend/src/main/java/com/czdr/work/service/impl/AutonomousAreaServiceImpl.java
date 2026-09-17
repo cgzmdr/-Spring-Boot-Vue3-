@@ -1,5 +1,6 @@
 package com.czdr.work.service.impl;
 
+import com.czdr.work.config.ReadCache;
 import com.czdr.work.model.entity.AutonomousArea;
 import com.czdr.work.model.entity.EthnicGroup;
 import com.czdr.work.model.resource.AutonomousAreaResource;
@@ -47,9 +48,18 @@ public class AutonomousAreaServiceImpl implements AutonomousAreaService {
 
     private final EasyEntityQuery entityQuery;
     private final EthnicService ethnicService;
+    private final ReadCache readCache;
 
     @Override
     public AutonomousAreaResource directory(String level, String keyword, String ethnic) {
+        // 该接口要回源 155 条自治地方 + 全量民族库，并在内存做多轮分组聚合，
+        // 是全站最重的目录页之一（生产实测 5~7 秒）。数据只在后台维护时变化，
+        // 因此按「筛选参数」缓存整个结果对象，命中后可降到毫秒级。
+        String cacheKey = "autonomous-areas:" + level + '|' + keyword + '|' + ethnic;
+        return readCache.get(cacheKey, () -> loadDirectory(level, keyword, ethnic));
+    }
+
+    private AutonomousAreaResource loadDirectory(String level, String keyword, String ethnic) {
         List<AutonomousArea> all = entityQuery.queryable(AutonomousArea.class)
                 .orderBy(a -> a.name().asc())
                 .toList();

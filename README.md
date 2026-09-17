@@ -34,6 +34,11 @@
   覆盖民族 / 节日 / 艺术 / 专题 / 表单配置，以及方向 B 新增的三类文化资料
   —— **人物档案、自治地方、传统体育**（完整 CRUD + RBAC 权限点）。
   内容审核、用户 / 角色 / 权限管理、统计看板，以及**检索索引与兴趣标签**维护
+- **内容审批工作流（Camunda 7 嵌入式引擎）**：审核员审批 → 内容上线 → 内容管理员审查 →
+  有问题则暂时下线 → 内容编辑修改（可看前序全部意见）→ 二次审批 → 重新上线 → 再审查……闭环。
+  **引擎内嵌在应用同一 JVM、复用业务 PostgreSQL**，生产部署**不需要**独立部署
+  Zeebe / Elasticsearch 等任何流程引擎组件（详见 [工作流文档](./docs/内容审批工作流-Camunda7.md)）。
+  支持网页版建模器（bpmn-js 画布 + 属性面板 + lint、Camunda Form 设计器、引擎状态与一键重部署）
 - **全文检索**（`/search`）：把站内 **8 类共 1142 条内容**纳入统一索引（改造前仅 3 类 413 条），
   支持**中文子串、拼音全拼（`mengguzu`）、拼音首字母（`mgz`）、英文名**四种输入，
   带**关键词高亮**、内容类型分面过滤与命中方式提示（如「按拼音匹配」「按首字母匹配」）；
@@ -44,6 +49,21 @@
   ⚠️ **如实说明**：当前站内行为样本极少（用户 5 个、行为计数 23 条），推荐以内容相似度与热度为主；
   接口会返回 `basis` / `dataNote` / `confidence` 明确告知本次推荐的**实际依据与样本量**，
   不把热度包装成「为你推荐」
+- **民族频道信息密度**（`/ethnic`）：列表卡片直接显示**关联内容计数**
+  （非遗 / 人物 / 自治地方 / 节日 / 美食 / 风俗 / 聚居地）与**人口排名徽标**，
+  无需点进详情即可横向比较；筛选支持地域、语系、**人口分档**、**「只看有非遗 / 有代表人物 / 有自治地方」**，
+  排序支持默认 / 人口升降序 / 拼音 / 名称。
+  民族详情页新增「**关联信息**」区：**相关人物**（代表性传承人 / 历史文化名家，可跳人物专栏）
+  与**民族自治地方**（按自治区 → 自治州 → 自治县·旗排序，可跳自治地方页），
+  并在基本资料中标注**人口位次**（第 N / 总数）。
+  ⚠️ 计数全部来自库中真实数据聚合（`EthnicMetricsService`），匹配不到的维度按 0 处理、不臆造
+- **只读目录接口缓存**（`ReadCache`，`app.cache.*`）：民族人口统计、自治地方、人物专栏、
+  传统体育等「读极多、写极少」的目录类接口走进程内缓存（默认 60 秒 TTL，后台内容变更时主动失效）。
+  民族人口统计命中缓存时**不再执行任何 SQL**（实测 30ms → 2ms）。
+  > ⚠️ 性能要点：`ethnic_group` 表只有 56 行，但 `description`（民族简介正文）合计约 **1.1 MB**。
+  > 人口统计/列表指标这类聚合**只取所需短列**（id/name/population/language_family/region），
+  > 单次查询数据量由约 **1792 KB 降到 6 KB（约 1/300）**；
+  > 若误用返回完整实体的 `findAll()`，每次请求都要白白传输并反序列化上百 KB 正文。
 - **移动端**（`mobile/`，可选）：React Native / Expo 浏览端
 
 ## 技术栈
@@ -51,10 +71,11 @@
 | 模块 | 技术 |
 | --- | --- |
 | 后端 `backend/` | Java 21 · Spring Boot 4 · Sa-Token（鉴权） · EasyQuery（ORM，PostgreSQL） · Redis · JavaMail · Lombok · Gradle |
+| 内容审批工作流 | **Camunda 7.24 嵌入式引擎**（`camunda-bpm-spring-boot-starter`，与应用同 JVM、复用业务库，无需外部集群） |
 | C 端门户（仓库根） | Vue 3.5 · TypeScript · Vite 8 · Element Plus · Pinia · Vue Router · pnpm |
-| 中后台 `admin/` | Vue 3 · TypeScript · Vite 6 · Element Plus · Pinia · ECharts |
+| 中后台 `admin/` | Vue 3 · TypeScript · Vite 6 · Element Plus · Pinia · ECharts · bpmn-js · form-js |
 | 移动端 `mobile/` | React Native · Expo（可选） |
-| 数据库 / 缓存 | PostgreSQL（业务数据） · Redis（验证码 / 计数缓存） |
+| 数据库 / 缓存 | PostgreSQL（业务数据 + 流程引擎 `ACT_*` 表） · Redis（验证码 / 计数缓存） |
 
 ## 仓库结构
 
@@ -77,6 +98,7 @@
 - JDK 21+、Gradle（使用仓库自带 `gradlew`）
 - PostgreSQL（建议 14+）与 Redis（建议 6+）
 - Node.js 20+ 与 pnpm 9+
+- **无需安装任何流程引擎组件**：Camunda 7 以依赖库形式内嵌，`ACT_*` 表在首次启动时自动创建
 
 ### 1. 初始化数据库
 
@@ -90,6 +112,8 @@ psql -U postgres -d 56_app -f backend/schema.sql
 
 > 增量结构变更以 `backend/src/main/resources/db/migration/` 下的脚本为准（幂等，可重复执行）。
 > 内容数据（民族 / 节日 / 艺术等）需通过中后台录入，或从现有环境导入。
+> 流程引擎的 `ACT_*` 表由引擎自动创建，**不需要**手工执行建表脚本
+> （除非把 `camunda.bpm.database.schema-update` 设为 `false`）。
 
 ### 2. 配置后端环境变量（敏感信息不入库）
 
@@ -111,6 +135,9 @@ cd backend
 ```
 
 - 首次启动会自动初始化角色 / 权限，并用 `app.admin` 配置创建超级管理员账号。
+- 首次启动会自动创建 Camunda 引擎表（`ACT_*`）并部署内置审批流程，
+  日志应出现 `ENGINE-00001 Process Engine default created.` 与
+  `Camunda 内置流程资源部署完成: processes=1, failures=0`。
 - 邮件验证码模板：将 `backend/sendemail.html` 复制到运行目录的 `dist/sendemail.html`（后端按 `./dist/sendemail.html` 读取）。
 
 ### 4. 启动 C 端门户（端口 5173）
@@ -166,7 +193,16 @@ cd backend && ./gradlew bootJar
   **伊斯兰历 / 傣历 / 藏历等无法可靠换算的记录会被跳过而不猜测日期**；仅精确到月的表述按该月十五估算并在接口中标记 `dateSource=approx`，前端以虚线弱化显示。
 - **管理端白名单**：`SaTokenConfigure#ADMIN_PUBLIC_PATHS` 放行 C 端需只读调用的 `/admin/**` 接口（当前仅 `/admin/view-counts`）。
   新增条目务必确认不返回敏感字段。
+- **流程引擎（Camunda 7，内嵌）**：引擎与应用同 JVM、复用业务数据源，**生产无需部署任何外部引擎组件**。
+  配置项集中在 `camunda.bpm.*`：`database.schema-update`（自动建表）、`job-execution.enabled`（服务任务异步作业需要）、
+  `history-level: audit`（够回溯前序审批意见）、`auto-deployment-enabled: false`（改由 `WorkflowDataInitializer` 显式部署，避免重复）。
+  引擎自带的 Cockpit / Tasklist / Admin webapp 与 REST API 已在 `build.gradle` 中排除（后台 UI 由本项目 admin 承担、鉴权走 Sa-Token）。
+  匿名遥测由 `CamundaConfig` 在启动后调用 `ManagementService#toggleTelemetry(false)` 关闭（starter 无对应配置项）。
+  > ⚠️ 迁移自 Camunda 8 的库**必须先执行 `V19__camunda7_embedded.sql`**：
+  > 引擎标识由长整型变为字符串，`process_instance_key` / `current_task_key` / `camunda_task_key`
+  > 三列需由 `bigint` 改为 `varchar`，否则字符串 ID 写不进去。
 
 ## 文档
 
-`docs/` 目录包含 [PRD](./docs/PRD.md)、[API 契约](./docs/API.md)、[UI 规范](./docs/UI-SPEC.md) 与[全站文档](./docs/全站文档.md)。
+`docs/` 目录包含 [PRD](./docs/PRD.md)、[API 契约](./docs/API.md)、[UI 规范](./docs/UI-SPEC.md)、
+[内容审批工作流（Camunda 7）](./docs/内容审批工作流-Camunda7.md) 与[全站文档](./docs/全站文档.md)。

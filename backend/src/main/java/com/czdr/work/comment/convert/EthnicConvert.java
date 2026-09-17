@@ -21,6 +21,18 @@ public class EthnicConvert {
     };
 
     public static EthnicQueryInfoResource toInfoModel(EthnicGroup entity){
+        return toInfoModel(entity, null);
+    }
+
+    /**
+     * 列表项转换（带关联指标）。
+     *
+     * @param metrics 关联内容计数；为 null 时全部按 0 输出
+     *                （用于「不需要指标的旧调用点」，避免调用方被迫构造空对象）
+     */
+    public static EthnicQueryInfoResource toInfoModel(EthnicGroup entity,
+                                                      com.czdr.work.model.more.BasicMetrics metrics){
+        var m = metrics == null ? com.czdr.work.model.more.BasicMetrics.EMPTY : metrics;
         return new EthnicQueryInfoResource(
                 entity.getId().toString(),
                 entity.getName(),
@@ -30,7 +42,15 @@ public class EthnicConvert {
                 entity.getLanguageFamily(),
                 entity.getSummary(),
                 entity.getCoverImage(),
-                entity.getThemeColor()
+                entity.getThemeColor(),
+                m.artCount(),
+                m.festivalCount(),
+                m.foodCount(),
+                m.customCount(),
+                m.locationCount(),
+                m.personCount(),
+                m.autonomousAreaCount(),
+                m.populationRank()
         );
     }
     //EthnicBriefResource（全家福互动墙：id/name/themeColor/coverImage）
@@ -54,6 +74,19 @@ public class EthnicConvert {
      */
     public static EthnicInfoDetailedResource toInfoDetailedModel(EthnicGroup entity,
                                                                 com.czdr.work.model.resource.EthnicHistoryResource history){
+        return toInfoDetailedModel(entity, history, null);
+    }
+
+    /**
+     * 详情转换（带关联信息）。
+     *
+     * @param related 关联人物 / 自治地方 / 人口排名；为 null 时按空列表与 0 输出。
+     *                由 {@code EthnicServiceImpl#relatedOf} 计算，避免在转换器里反向依赖 service。
+     */
+    public static EthnicInfoDetailedResource toInfoDetailedModel(EthnicGroup entity,
+                                                                com.czdr.work.model.resource.EthnicHistoryResource history,
+                                                                com.czdr.work.model.more.EthnicRelated related){
+        var r = related == null ? com.czdr.work.model.more.EthnicRelated.EMPTY : related;
         return new EthnicInfoDetailedResource(
                 entity.getId().toString(),
                 entity.getSlug(),
@@ -85,7 +118,11 @@ public class EthnicConvert {
                 entity.getFoods(),
                 entity.getFestivals(),
                 entity.getArts(),
-                history
+                history,
+                r.persons(),
+                r.autonomousAreas(),
+                r.populationRank(),
+                r.populationTotal()
         );
     }
     /**

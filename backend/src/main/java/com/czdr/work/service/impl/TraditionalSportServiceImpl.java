@@ -1,5 +1,6 @@
 package com.czdr.work.service.impl;
 
+import com.czdr.work.config.ReadCache;
 import com.czdr.work.model.entity.EthnicGroup;
 import com.czdr.work.model.entity.TraditionalSport;
 import com.czdr.work.model.resource.TraditionalSportResource;
@@ -49,9 +50,17 @@ public class TraditionalSportServiceImpl implements TraditionalSportService {
 
     private final EasyEntityQuery entityQuery;
     private final EthnicService ethnicService;
+    private final ReadCache readCache;
 
     @Override
     public TraditionalSportResource directory(String category, String ethnic, String keyword) {
+        // 与自治地方目录同构：回源全量体育项目 + 全量民族库后做内存聚合，
+        // 生产实测 6 秒左右，缓存后可降到毫秒级。
+        String cacheKey = "traditional-sports:" + category + '|' + ethnic + '|' + keyword;
+        return readCache.get(cacheKey, () -> loadDirectory(category, ethnic, keyword));
+    }
+
+    private TraditionalSportResource loadDirectory(String category, String ethnic, String keyword) {
         List<TraditionalSport> all = entityQuery.queryable(TraditionalSport.class).toList();
 
         // 内容库民族索引（用于生成跳转）

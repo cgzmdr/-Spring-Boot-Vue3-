@@ -40,6 +40,8 @@ export default defineConfig({
       // 同源代理可自动携带 Cookie，保证 sa-token 登录态在 /auth/me 等接口正常
       '/auth': { target: 'http://localhost:20256', changeOrigin: true },
       '/admin': { target: 'http://localhost:20256', changeOrigin: true },
+      // 内容审批工作流（Camunda 8）：全部接口挂在 /api/workflow 下
+      '/api': { target: 'http://localhost:20256', changeOrigin: true },
       '/ethnic-groups': { target: 'http://localhost:20256', changeOrigin: true },
       '/festivals': { target: 'http://localhost:20256', changeOrigin: true },
       '/arts': { target: 'http://localhost:20256', changeOrigin: true },

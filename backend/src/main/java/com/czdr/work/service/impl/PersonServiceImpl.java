@@ -1,5 +1,6 @@
 package com.czdr.work.service.impl;
 
+import com.czdr.work.config.ReadCache;
 import com.czdr.work.model.entity.Art;
 import com.czdr.work.model.entity.PersonProfile;
 import com.czdr.work.model.entity.proxy.ArtProxy;
@@ -53,9 +54,19 @@ public class PersonServiceImpl implements PersonService {
     );
 
     private final EasyEntityQuery entityQuery;
+    private final ReadCache readCache;
 
     @Override
     public PersonDirectoryResource directory(String keyword, String domain, String ethnic, String roleType) {
+        // 该接口回源全部人物档案 + 全部非遗项目（含民族导航属性），再在内存建索引、
+        // 组装统计与筛选项（生产实测 6 秒左右）。结果只依赖查询参数与后台数据，
+        // 适合整对象缓存。
+        String cacheKey = "persons:" + keyword + '|' + domain + '|' + ethnic + '|' + roleType;
+        return readCache.get(cacheKey,
+                () -> loadDirectory(keyword, domain, ethnic, roleType));
+    }
+
+    private PersonDirectoryResource loadDirectory(String keyword, String domain, String ethnic, String roleType) {
         // ---- 1) 人物档案 ----
         List<PersonProfile> profiles = entityQuery.queryable(PersonProfile.class).toList();
 

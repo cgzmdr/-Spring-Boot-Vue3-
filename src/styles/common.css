@@ -490,6 +490,24 @@ figure:hover .cover-img {
 .footer .foot a:hover {
 	color: var(--accent);
 }
+.footer .legal {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 6px;
+	text-align: right;
+}
+.footer .icp {
+	text-transform: none;
+	letter-spacing: 1px;
+	color: var(--muted);
+}
+@media (max-width: 720px) {
+	.footer .legal {
+		align-items: flex-start;
+		text-align: left;
+	}
+}
 
 /* ==========================================================================
    章节标题规则

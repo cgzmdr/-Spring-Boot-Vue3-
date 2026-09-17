@@ -1,0 +1,129 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.7'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.czdr'
+version = '0.0.1-SNAPSHOT'
+description = '56-app'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    set('saTokenVersion',"1.45.0")
+    set('easyQueryVersion', "3.2.1")
+    springAiVersion = "2.0.1"
+}
+
+configurations {
+    all {
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-to-slf4j'
+        exclude group: 'org.slf4j', module: 'jul-to-slf4j'
+    }
+}
+
+dependencies {
+    implementation 'io.camunda:camunda-spring-boot-4-starter:8.9.0'
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation('org.springframework.boot:spring-boot-starter-data-redis') {
+        exclude group: 'org.springframework', module: 'spring-oxm'
+    }
+    implementation 'org.postgresql:postgresql'
+
+    implementation("com.easy-query:sql-springboot4-starter:${easyQueryVersion}") {
+        exclude group: 'com.easy-query', module: 'sql-mysql'
+        exclude group: 'com.easy-query', module: 'sql-mssql'
+        exclude group: 'com.easy-query', module: 'sql-db2'
+        exclude group: 'com.easy-query', module: 'sql-clickhouse'
+        exclude group: 'com.easy-query', module: 'sql-duckdb'
+        exclude group: 'com.easy-query', module: 'sql-kingbase-es'
+        exclude group: 'com.easy-query', module: 'sql-dameng'
+        exclude group: 'com.easy-query', module: 'sql-h2'
+        exclude group: 'com.easy-query', module: 'sql-sqlite'
+        exclude group: 'com.easy-query', module: 'sql-tsdb'
+        exclude group: 'com.easy-query', module: 'sql-oracle'
+        exclude group: 'com.easy-query', module: 'sql-gauss-db'
+    }
+    implementation "com.easy-query:sql-pgsql:${easyQueryVersion}"
+    implementation 'org.projectlombok:lombok'
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor "com.easy-query:sql-processor:${easyQueryVersion}"
+    implementation 'org.springframework.security:spring-security-crypto'
+    implementation "cn.dev33:sa-token-spring-boot4-starter:${saTokenVersion}"
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
+
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // 拼音检索（全文检索的「拼音/首字母」维度，方向 D-1）：
+    // pinyin4j 体积极小、无外部依赖、可离线运行，用于在建立搜索索引时
+    // 为中文标题生成「全拼」与「首字母缩写」两种形式（如 蒙古族 → mengguzu / mgz）。
+    implementation 'com.belerweb:pinyin4j:2.5.1'
+
+    // Apifox Helper / Swagger 注解（仅编译期，用于生成 API 文档）
+    compileOnly 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.27'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.ai:spring-ai-bom:$springAiVersion"
+    }
+}
+
+// ============================================================================
+// 静态资源外置：打包时不在 bootJar 中打入 static，而是复制到 jar 同级 static 目录。
+// 开发环境仍通过 processResources 输出到 build/resources/main，可正常访问。
+// 生产环境请将 build/libs/static 与 jar 放在同一目录（或通过 app.static-location 指定）。
+// ============================================================================
+tasks.register('copyStaticResources', Copy) {
+    from('src/main/resources/static')
+    into(layout.buildDirectory.dir('libs/static'))
+}
+
+tasks.named('bootJar') {
+    dependsOn 'copyStaticResources'
+    // bootJar 不打包 static，避免 jar 体积过大；生产静态资源由外部目录提供。
+    exclude('static/**')
+}
+
+// plain jar 同样不打包 static，保持两种 jar 产物行为一致。
+tasks.named('jar') {
+    exclude('static/**')
+}
+
+// ============================================================================
+// 历史沿革解析器校验（方向 C-2）
+//
+// 对真实 56 行数据跑断言（年份写法必须存在于原文、下标一致、时代按时间排序等）。
+// 先导出数据：psql -U postgres -h localhost -d 56_app -f scripts/export-ethnic-descriptions.sql
+// 然后：gradlew runHistoryCheck
+// ============================================================================
+tasks.register('runHistoryCheck', JavaExec) {
+    group = 'verification'
+    description = '对真实 56 行民族数据校验【历史沿革】结构化解析结果'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.czdr.work.HistoryParserCheck'
+    args = ['scripts/ethnic-descriptions.tsv']
+}
+
+tasks.register('runHistoryReport', JavaExec) {
+    group = 'verification'
+    description = '输出 56 个民族的历史沿革结构化摘要（段落/时间轴/时代/锚定比例）'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.czdr.work.HistoryParserReport'
+    args = ['scripts/ethnic-descriptions.tsv']
+}
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-parameters'
+}

@@ -55,11 +55,21 @@ app:
   crypto:
     aes-key: ${APP_AES_KEY:0123456789abcdef}
     aes-iv: ${APP_AES_IV:fedcba9876543210}
+  # 内容审批工作流（Camunda 7 嵌入式引擎）：启动时自动部署内置 BPMN，失败仅告警不阻断启动
+  camunda:
+    deploy-on-startup: ${APP_CAMUNDA_DEPLOY_ON_STARTUP:true}
+    init-forms: ${APP_CAMUNDA_INIT_FORMS:true}
   admin:
     account: ${APP_ADMIN_ACCOUNT:admin@example.com}
     password: ${APP_ADMIN_PASSWORD:Admin12345@}
   upload:
     location: ${APP_UPLOAD_LOCATION:./uploads}
+  # 只读目录接口的进程内缓存（见 ReadCache）。
+  # 目录类数据变化少、读极多，缓存可把 /autonomous-areas、/persons 这类
+  # 需要回源全表并在内存聚合的接口从「秒级」降到「毫秒级」。
+  cache:
+    enabled: ${APP_CACHE_ENABLED:true}
+    ttl-ms: ${APP_CACHE_TTL_MS:60000}
   notify:
     email-enabled: ${APP_NOTIFY_EMAIL_ENABLED:true}
     broadcast-max-recipients: ${APP_NOTIFY_BROADCAST_MAX:2000}
@@ -76,3 +86,41 @@ app:
     timeout-seconds: ${APP_TRANSLATE_TIMEOUT:40}
     max-chars: ${APP_TRANSLATE_MAX_CHARS:4000}
     cache-enabled: ${APP_TRANSLATE_CACHE:true}
+
+# ============================================================================
+# Camunda 7 嵌入式流程引擎
+#
+# 与原先 Camunda 8（远端 Zeebe 网关 + Elasticsearch 二次存储）的关键差别：
+# 引擎以依赖库的形式跑在本应用进程内，复用同一个业务 PostgreSQL 数据源，
+# 因此生产部署不再需要单独部署/运维 Zeebe broker、gateway 与 Elasticsearch。
+#
+# database.schema-update=true 让引擎在首次启动时自动建 ACT_* 表（之后为空操作）。
+# 若生产要求「DDL 必须由 DBA 执行」，可改为 false 并用引擎自带的
+# sql/create/*.sql 预建表。
+# ============================================================================
+camunda:
+  bpm:
+    # 自动部署 src/main/resources/processes 下的内置流程；
+    # 应用自身的 WorkflowDataInitializer 也会部署（幂等，会生成新版本），
+    # 这里关掉以避免启动时重复部署两份。
+    auto-deployment-enabled: false
+    database:
+      schema-update: true
+      type: postgres
+    # 服务任务（内容上线/下线 delegate）为同步执行，无需作业执行器；
+    # 保留开启以便将来使用 asyncBefore/定时边界事件。
+    job-execution:
+      enabled: true
+      core-pool-size: 3
+      max-pool-size: 10
+    # 历史级别 audit：记录流程实例/活动/任务/变量，够用于「查看前序审批意见」的回溯，
+    # 又不像 full 那样把变量更新全量留痕（历史表增长最快的就是变量明细）。
+    history-level: audit
+    # 引擎自带的 Cockpit/Tasklist/Admin webapp 与 REST API 已排除（见 build.gradle），
+    # 后台 UI 完全由本项目 admin 前端 + Sa-Token 鉴权承担。
+    #
+    # 注意：Camunda 7 的 starter **没有** camunda.bpm.telemetry.* 配置项
+    # （不存在于 spring-configuration-metadata.json 中），
+    # 匿名遥测由 CamundaConfig 通过引擎配置项关闭。
+    metrics:
+      enabled: false

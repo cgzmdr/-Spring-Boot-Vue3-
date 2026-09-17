@@ -49,6 +49,8 @@ public class Festival implements ProxyEntityAvailable<Festival, FestivalProxy> {
     public String images;
     public String coverImage;
     public String status;
+    /** 内容版本号：每提交一次审批 +1 */
+    public Integer contentVersion;
     public Integer orderNum;
     public UUID createdBy;
     public UUID updatedBy;

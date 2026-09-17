@@ -29,10 +29,10 @@ export interface PageData<T> {
 }
 
 /** 内容状态 */
-export type ContentStatus = 'draft' | 'pending' | 'published' | 'rejected'
+export type ContentStatus = 'draft' | 'pending' | 'published' | 'rejected' | 'offline'
 
-/** 审核状态 */
-export type ReviewStatus = 'pending' | 'approved' | 'rejected'
+/** 审核状态（content_review 快照：offline/revising 由内容审批工作流引入） */
+export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'offline' | 'revising'
 
 /** 角色 */
 export interface Role {
@@ -205,7 +205,7 @@ export interface Topic {
   entries?: unknown[]
 }
 
-/** 审核记录 */
+/** 审核记录（content_review：审核态快照） */
 export interface ReviewRecord {
   id: UuidLike
   entryType: string
@@ -216,6 +216,12 @@ export interface ReviewRecord {
   rejectReason?: string
   submittedAt?: string
   reviewedAt?: string
+  /** 关联的工作流实例（Camunda 8） */
+  instanceId?: UuidLike
+  /** 内容版本号（第几版） */
+  contentVersion?: number
+  /** 最近一条审批/审查意见摘要 */
+  lastOpinion?: string
 }
 
 /** 统计总览 */

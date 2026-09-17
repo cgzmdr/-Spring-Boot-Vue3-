@@ -1,0 +1,97 @@
+spring:
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: ${MAIL_USERNAME:your-mail@example.com}
+    password: ${MAIL_PASSWORD:your-smtp-authorization-code}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+  datasource:
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 60000
+      max-lifetime: 180000
+      data-source-properties:
+        reWriteBatchedInserts: true
+        prepareThreshold: 3
+        preferQueryMode: extended
+        tcpKeepAlive: true
+        socketTimeout: 10
+        connectTimeout: 5
+  main:
+    lazy-initialization: true
+    banner-mode: off
+  threads:
+    virtual:
+      enabled: true
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:prod}
+  application:
+    name: 56-app
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+easy-query:
+  database: PGSQL
+  allow-delete-statement: true
+server:
+  port: 20256
+sa-token:
+  token-name: satoken
+  is-read-header: true
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: false
+app:
+  crypto:
+    aes-key: ${APP_AES_KEY:0123456789abcdef}
+    aes-iv: ${APP_AES_IV:fedcba9876543210}
+  # 内容审批工作流（Camunda 8）：启动时自动部署内置 BPMN/Form，失败仅告警不阻断启动
+  camunda:
+    deploy-on-startup: ${APP_CAMUNDA_DEPLOY_ON_STARTUP:true}
+    init-forms: ${APP_CAMUNDA_INIT_FORMS:true}
+  admin:
+    account: ${APP_ADMIN_ACCOUNT:admin@example.com}
+    password: ${APP_ADMIN_PASSWORD:Admin12345@}
+  upload:
+    location: ${APP_UPLOAD_LOCATION:./uploads}
+  # 只读目录接口的进程内缓存（见 ReadCache）。
+  # 目录类数据变化少、读极多，缓存可把 /autonomous-areas、/persons 这类
+  # 需要回源全表并在内存聚合的接口从「秒级」降到「毫秒级」。
+  cache:
+    enabled: ${APP_CACHE_ENABLED:true}
+    ttl-ms: ${APP_CACHE_TTL_MS:60000}
+  notify:
+    email-enabled: ${APP_NOTIFY_EMAIL_ENABLED:true}
+    broadcast-max-recipients: ${APP_NOTIFY_BROADCAST_MAX:2000}
+    active-window-days: ${APP_NOTIFY_ACTIVE_DAYS:30}
+  translate:
+    provider: ${APP_TRANSLATE_PROVIDER:glossary}
+    fallback-provider: ${APP_TRANSLATE_FALLBACK:spring-ai}
+    glossary-min-coverage: ${APP_TRANSLATE_MIN_COVERAGE:0.8}
+    auto-glossary-enabled: ${APP_TRANSLATE_AUTO_GLOSSARY:true}
+    auto-glossary-max-terms: ${APP_TRANSLATE_AUTO_GLOSSARY_MAX:8}
+    base-url: ${APP_TRANSLATE_BASE_URL:http://127.0.0.1:8080/v1}
+    api-key: ${APP_TRANSLATE_API_KEY:cz}
+    model: ${APP_TRANSLATE_MODEL:DeepSeek-R1-Distill-Qwen-7B-Q8_0}
+    timeout-seconds: ${APP_TRANSLATE_TIMEOUT:40}
+    max-chars: ${APP_TRANSLATE_MAX_CHARS:4000}
+    cache-enabled: ${APP_TRANSLATE_CACHE:true}
+camunda:
+  client:
+    mode: self-managed
+    auth:
+      method: basic
+      username: demo
+      password: demo
+    deployment:
+      enabled: false

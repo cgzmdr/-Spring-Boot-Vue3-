@@ -40,6 +40,14 @@ public record EthnicInfoDetailedResource(    @Schema(description = "民族 ID") 
     @Schema(description = "民族美食列表") List<Food> foods,
     @Schema(description = "民族节日列表") List<Festival> festivals,
     @Schema(description = "民族艺术列表") List<Art> arts,
-    @Schema(description = "历史沿革结构化（时间轴/时代分期/段落索引，方向 C-2）") EthnicHistoryResource history
+    @Schema(description = "历史沿革结构化（时间轴/时代分期/段落索引，方向 C-2）") EthnicHistoryResource history,
+
+    // ==================== 信息量增强：关联信息 ====================
+    @Schema(description = "关联人物档案（该民族的代表性传承人与历史文化名家）")
+    List<PersonProfile> persons,
+    @Schema(description = "民族自治地方（以该民族为自治民族的自治区/州/县·旗）")
+    List<AutonomousArea> autonomousAreas,
+    @Schema(description = "人口排名（1 = 人口最多，基于七普口径）") int populationRank,
+    @Schema(description = "全国民族总数（用于表述「第 N / 56」）") int populationTotal
 ) {
 }

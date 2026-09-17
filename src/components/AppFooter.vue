@@ -17,7 +17,15 @@ const lang = useLangStore()
         <span> · </span>
         <router-link to="/about">{{ lang.t('footer_contact') }}</router-link>
       </div>
-      <div>{{ lang.t('footer_rights') }}</div>
+      <div class="legal">
+        <div>{{ lang.t('footer_rights') }}</div>
+        <a
+          class="icp"
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >闽ICP备2026036736号</a>
+      </div>
     </div>
   </footer>
 </template>

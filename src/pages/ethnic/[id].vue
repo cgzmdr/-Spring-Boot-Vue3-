@@ -148,6 +148,43 @@ const arts = computed(() =>
 	})),
 );
 
+/* ---------------------------------------------------------------------------
+   关联信息（信息量增强）
+   后端按民族名匹配得到；这里只做展示层排序与文案映射。
+   --------------------------------------------------------------------------- */
+
+/** 关联人物：代表性传承人排在历史文化名家之前（与人物专栏的分类口径一致） */
+const relatedPersons = computed(() => {
+	const list = [...(detail.value?.persons || [])];
+	const weight = (r: string | null) =>
+		r === "inheritor" ? 0 : r === "master" ? 1 : 2;
+	return list.sort((a, b) => weight(a.roleType) - weight(b.roleType));
+});
+
+/** 关联自治地方：后端已按级别排序，这里保持原顺序 */
+const relatedAreas = computed(() => detail.value?.autonomousAreas || []);
+
+/** 人物角色中文名（与人物专栏保持一致） */
+function personRoleLabel(role: string | null) {
+	if (role === "inheritor") return "代表性传承人";
+	if (role === "master") return "历史文化名家";
+	return "人物";
+}
+
+/** 自治地方级别中文名 */
+function areaLevelLabel(level: string | null) {
+	switch (level) {
+		case "autonomous_region":
+			return "自治区";
+		case "autonomous_prefecture":
+			return "自治州";
+		case "autonomous_county":
+			return "自治县·旗";
+		default:
+			return "自治地方";
+	}
+}
+
 /** 长文简介：解析为结构化段落，并把「历史沿革」小节单独拆出成一栏 */
 const article = computed(() => {
 	const text =
@@ -479,7 +516,17 @@ function tagSearch(tag: string) {
 							>
 								<dl>
 									<dt>人口</dt>
-									<dd>{{ formatNumber(detail.population) }}</dd>
+									<dd>
+										{{ formatNumber(detail.population) }}
+										<!-- 人口定位：在 56 个民族中的位次，比孤立数字更有参照 -->
+										<span
+											v-if="detail.populationRank"
+											class="rank-hint"
+											:title="`按 2020 年七普口径人口降序，在 ${detail.populationTotal} 个已收录民族中排第 ${detail.populationRank} 位`"
+										>
+											第 {{ detail.populationRank }} / {{ detail.populationTotal }}
+										</span>
+									</dd>
 									<dt>语系</dt>
 									<dd>{{ detail.languageFamily }}</dd>
 									<dt>语言</dt>
@@ -510,6 +557,98 @@ function tagSearch(tag: string) {
 									</dd>
 								</dl>
 							</div>
+						</div>
+					</div>
+
+					<!--
+						关联信息：把库中已有、但原先详情页未展示的两个维度补齐
+						——「相关人物」与「自治地方」。两者都按民族名匹配（非外键），
+						匹配不到时不渲染该区块，不做占位。
+					-->
+					<div
+						v-if="relatedPersons.length || relatedAreas.length"
+						class="panel related-panel"
+					>
+						<h3>关联信息</h3>
+
+						<!-- 自治地方：按「自治区 → 自治州 → 自治县·旗」排序 -->
+						<div
+							v-if="relatedAreas.length"
+							class="related-block"
+						>
+							<div class="related-title">
+								民族自治地方
+								<span class="related-count">{{ relatedAreas.length }} 处</span>
+							</div>
+							<ul class="related-list">
+								<li
+									v-for="a in relatedAreas"
+									:key="a.id"
+								>
+									<span
+										class="rel-badge"
+										:style="{ background: detail.themeColor }"
+									>
+										{{ areaLevelLabel(a.level) }}
+									</span>
+									<router-link
+										class="rel-name"
+										:to="`/autonomous?keyword=${encodeURIComponent(a.name)}`"
+										:title="`在「民族自治地方」中查看 ${a.name}`"
+									>
+										{{ a.name }}
+									</router-link>
+									<span
+										v-if="a.establishedYear"
+										class="rel-meta"
+									>
+										{{ a.establishedYear }} 年设立
+									</span>
+								</li>
+							</ul>
+						</div>
+
+						<!-- 相关人物：代表性传承人 / 历史文化名家 -->
+						<div
+							v-if="relatedPersons.length"
+							class="related-block"
+						>
+							<div class="related-title">
+								相关人物
+								<span class="related-count">{{ relatedPersons.length }} 位</span>
+							</div>
+							<ul class="related-list">
+								<li
+									v-for="p in relatedPersons"
+									:key="p.id"
+								>
+									<span
+										class="rel-badge"
+										:style="{ background: detail.themeColor }"
+									>
+										{{ personRoleLabel(p.roleType) }}
+									</span>
+									<router-link
+										class="rel-name"
+										:to="`/persons?keyword=${encodeURIComponent(p.personName)}`"
+										:title="`在「人物专栏」中查看 ${p.personName}`"
+									>
+										{{ p.personName }}
+									</router-link>
+									<span
+										v-if="p.lifespan"
+										class="rel-meta"
+									>
+										{{ p.lifespan }}
+									</span>
+									<span
+										v-if="p.domain"
+										class="rel-meta"
+									>
+										{{ p.domain }}
+									</span>
+								</li>
+							</ul>
 						</div>
 					</div>
 				</div>
@@ -839,6 +978,73 @@ function tagSearch(tag: string) {
 </template>
 
 <style scoped>
+/* ==========================================================================
+   关联信息（信息量增强）：相关人物 / 自治地方
+   ========================================================================== */
+/* 人口位次：跟在人口数字后的弱化提示 */
+.rank-hint {
+	margin-left: 6px;
+	font-size: 12px;
+	color: var(--ink-3, #6b6b6b);
+}
+
+.related-panel {
+	margin-top: 16px;
+}
+.related-block + .related-block {
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px dashed var(--line, rgba(0, 0, 0, 0.12));
+}
+.related-title {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin-bottom: 8px;
+	font-weight: 600;
+	font-size: 14px;
+}
+.related-count {
+	font-weight: 400;
+	font-size: 12px;
+	color: var(--ink-3, #6b6b6b);
+}
+.related-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.related-list li {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 5px 0;
+}
+/* 级别/角色徽标：与主题色联动，保持民族频道的一致性 */
+.rel-badge {
+	flex: none;
+	padding: 1px 7px;
+	border-radius: 3px;
+	font-size: 11px;
+	color: #fff;
+	opacity: 0.9;
+	white-space: nowrap;
+}
+.rel-name {
+	font-size: 13px;
+	color: inherit;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+.rel-name:hover {
+	border-bottom-color: currentColor;
+}
+.rel-meta {
+	font-size: 12px;
+	color: var(--ink-3, #6b6b6b);
+}
+
 /* ==========================================================================
    民族简介头部吸顶
    · .duo > .panel 默认 overflow: hidden，会让 sticky 相对该 overflow 容器定位

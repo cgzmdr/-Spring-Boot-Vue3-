@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import PageHead from "@/components/PageHead.vue";
 import EthnicCard from "@/components/EthnicCard.vue";
@@ -15,6 +15,22 @@ const route = useRoute();
 const router = useRouter();
 
 const REGIONS = ["东北", "西北", "西南", "中南", "东南", "内蒙古", "其他"];
+/** 「只看有…」快捷筛选：把「内容丰富的民族」这类诉求变成一次点击 */
+const ONLY_FILTERS = [
+	{ key: "heritage" as const, label: "有非遗", hint: "只看关联了艺术/非物质文化遗产的民族" },
+	{ key: "person" as const, label: "有代表人物", hint: "只看关联了人物档案的民族" },
+	{ key: "area" as const, label: "有自治地方", hint: "只看设有民族自治地方的民族" },
+];
+/**
+ * 人口规模分档（服务端按 populationMin/populationMax 过滤）。
+ * 分档阈值取自七普数据的自然断点：千万级 / 百万级 / 十万级 / 十万以下。
+ */
+const POPULATION_BANDS = [
+	{ key: "10m", label: "千万以上", min: 10_000_000, max: undefined },
+	{ key: "1m", label: "百万–千万", min: 1_000_000, max: 10_000_000 },
+	{ key: "100k", label: "十万–百万", min: 100_000, max: 1_000_000 },
+	{ key: "small", label: "十万以下", min: undefined, max: 100_000 },
+] as const;
 const FAMILIES = [
 	"汉藏语系",
 	"阿尔泰语系",
@@ -27,6 +43,7 @@ const SORTS = ref([
 	{ key: "orderNum", value: "orderNum,asc", label: "默认排序" },
 	{ key: "population", value: "population,asc", label: "人口", status: "Up" },
 	{ key: "pinyin", value: "pinyin,asc", label: "拼音 A–Z" },
+	{ key: "name", value: "name,asc", label: "名称" },
 ]);
 // <el-icon><SortUp /></el-icon>
 // <el-icon><SortDown /></el-icon>
@@ -34,6 +51,57 @@ const filter = reactive({
 	region: "",
 	languageFamily: "",
 	sort: "orderNum,asc",
+	/** 只看有该类内容关联的民族（前端二次过滤，避免为一个布尔条件改接口契约） */
+	only: "" as "" | "heritage" | "person" | "area",
+	/** 人口分档（服务端过滤） */
+	band: "",
+});
+
+/** 人口分档 -> 请求参数 */
+function bandParams() {
+	const b = POPULATION_BANDS.find((x) => x.key === filter.band);
+	return {
+		populationMin: b?.min,
+		populationMax: b?.max,
+	};
+}
+
+function pickBand(key: string) {
+	filter.band = filter.band === key ? "" : key;
+	page.value = 0;
+	load();
+}
+
+/**
+ * 把列表项的关联计数整理成卡片指标条。
+ * <p>顺序即视觉优先级：非遗 → 人物 → 自治地方 → 节日 → 美食 → 风俗 → 聚居地。
+ * 数值为 0 的项由卡片自行过滤，因此这里无需判断。</p>
+ */
+function statsOf(e: EthnicListItem) {
+	return [
+		{ value: e.artCount, unit: "非遗", title: `关联 ${e.artCount} 条艺术/非物质文化遗产` },
+		{ value: e.personCount, unit: "人物", title: `关联 ${e.personCount} 位人物档案` },
+		{
+			value: e.autonomousAreaCount,
+			unit: "自治地方",
+			title: `以${e.name}为自治民族的自治地方 ${e.autonomousAreaCount} 个`,
+		},
+		{ value: e.festivalCount, unit: "节日", title: `关联 ${e.festivalCount} 个节日` },
+		{ value: e.foodCount, unit: "美食", title: `关联 ${e.foodCount} 道美食` },
+		{ value: e.customCount, unit: "风俗", title: `关联 ${e.customCount} 条风俗习惯` },
+		{ value: e.locationCount, unit: "聚居地", title: `${e.locationCount} 处主要聚居地` },
+	];
+}
+
+/** 客户端「只看有…」过滤：不改变分页请求，只影响当前页展示 */
+const displayed = computed(() => {
+	if (!filter.only) return list.value;
+	return list.value.filter((e) => {
+		if (filter.only === "heritage") return e.artCount > 0;
+		if (filter.only === "person") return e.personCount > 0;
+		if (filter.only === "area") return e.autonomousAreaCount > 0;
+		return true;
+	});
 });
 const list = ref<EthnicListItem[]>([]);
 const total = ref(0);
@@ -95,6 +163,7 @@ async function load() {
 			sort: filter.sort,
 			region: filter.region || undefined,
 			languageFamily: filter.languageFamily || undefined,
+			...bandParams(),
 		});
 		list.value = res.data;
 		total.value = res.total;
@@ -143,6 +212,8 @@ function reset() {
 	filter.region = "";
 	filter.languageFamily = "";
 	filter.sort = "orderNum,asc";
+	filter.only = "";
+	filter.band = "";
 	page.value = 0;
 	load();
 	if (view.value === "map") loadMap();
@@ -213,6 +284,31 @@ onMounted(() => {
 					@click="pickFamily(filter.languageFamily)"
 				>
 					✕ 清除
+				</button>
+			</div>
+			<div class="row">
+				<span class="label">人口</span>
+				<button
+					v-for="b in POPULATION_BANDS"
+					:key="b.key"
+					class="chip"
+					:class="{ active: filter.band === b.key }"
+					@click="pickBand(b.key)"
+				>
+					{{ b.label }}
+				</button>
+			</div>
+			<div class="row">
+				<span class="label">只看</span>
+				<button
+					v-for="o in ONLY_FILTERS"
+					:key="o.key"
+					class="chip"
+					:class="{ active: filter.only === o.key }"
+					:title="o.hint"
+					@click="filter.only = filter.only === o.key ? '' : o.key"
+				>
+					{{ o.label }}
 				</button>
 			</div>
 			<div
@@ -320,18 +416,31 @@ onMounted(() => {
 				</el-empty>
 			</div>
 
-			<template v-else-if="list.length">
+			<template v-else-if="displayed.length">
 				<div class="grid grid-4">
 					<EthnicCard
-						v-for="e in list"
+						v-for="(e, i) in displayed"
 						:key="e.id"
 						:id="e.id"
 						:name="e.name"
+						:index="i"
 						:cover-image="e.coverImage"
 						:theme-color="e.themeColor"
+						:population-rank="e.populationRank"
+						:population="e.population"
+						:stats="statsOf(e)"
 						:meta="`${e.region?.[0] || '—'} · ${e.languageFamily || '—'} · 人口 ${formatNumber(e.population)}`"
 					/>
 				</div>
+				<!-- 「只看」是前端二次过滤，命中数可能小于本页条数，如实说明 -->
+				<p
+					v-if="filter.only && displayed.length !== list.length"
+					class="only-note"
+				>
+					本页 {{ list.length }} 个民族中，有 {{ displayed.length }} 个符合「{{
+						ONLY_FILTERS.find((o) => o.key === filter.only)?.label
+					}}」条件。
+				</p>
 				<AppPagination
 					:current="page"
 					:total="total"
@@ -342,7 +451,11 @@ onMounted(() => {
 
 			<el-empty
 				v-else
-				description="没有符合筛选条件的民族"
+				:description="
+					filter.only
+						? '本页没有符合该条件的民族，可翻页或取消「只看」筛选'
+						: '没有符合筛选条件的民族'
+				"
 				style="padding: 48px 0"
 			/>
 		</template>
@@ -371,5 +484,11 @@ onMounted(() => {
 	background: var(--accent);
 	color: #fff;
 	border-color: var(--accent);
+}
+/* 「只看」过滤命中数说明：弱化处理，避免与结果总数争夺注意力 */
+.only-note {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: var(--ink-3, #6b6b6b);
 }
 </style>

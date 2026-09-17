@@ -22,6 +22,10 @@ ext {
     set('saTokenVersion',"1.45.0")
     set('easyQueryVersion', "3.2.1")
     springAiVersion = "2.0.1"
+    // Camunda 7 嵌入式流程引擎（7.24.x 是官方支持 Spring Boot 4.0.x 的版本，
+    // 见 https://docs.camunda.org/manual/7.24/user-guide/spring-boot-integration/version-compatibility/）。
+    // 引擎跑在应用同一 JVM 内、复用业务 PostgreSQL 库，生产无需独立 Zeebe broker/gateway/ES。
+    set('camundaVersion', "7.24.0")
 }
 
 configurations {
@@ -32,6 +36,26 @@ configurations {
 }
 
 dependencies {
+    // ==========================================================================
+    // 工作流：Camunda 7 嵌入式流程引擎
+    //
+    // 相比原先的 Camunda 8（Zeebe broker + gateway + Elasticsearch 二次存储的
+    // 独立集群 + 瘦客户端），Camunda 7 直接以库的形式跑在本应用 JVM 内：
+    //   · 无需单独部署/运维 Zeebe 集群与 Elasticsearch；
+    //   · 引擎表建在业务同一个 PostgreSQL 库里，事务与业务数据一致；
+    //   · 用户任务/流程实例查询是本地 SQL，没有「二次存储延迟」，因此原先为
+    //     规避该延迟而写的对账轮询逻辑可以大幅简化。
+    //
+    // 只引 core starter（不含 starter-webapp）：后台 UI 由本项目 admin 前端自建，
+    // 不需要 Camunda 自带的 Cockpit/Tasklist/Admin webapp，避免引入额外的
+    // Spring Security 过滤器链与静态资源（会与 Sa-Token 鉴权冲突）。
+    // ==========================================================================
+    implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter:${camundaVersion}") {
+        // Camunda 自带 webapp/rest 依赖会拉起另一套安全与 Servlet 配置，这里排除
+        exclude group: 'org.camunda.bpm.springboot', module: 'camunda-bpm-spring-boot-starter-webapp'
+        exclude group: 'org.camunda.bpm.springboot', module: 'camunda-bpm-spring-boot-starter-webapp-core'
+        exclude group: 'org.camunda.bpm.springboot', module: 'camunda-bpm-spring-boot-starter-rest'
+    }
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation('org.springframework.boot:spring-boot-starter-data-redis') {
@@ -122,4 +146,7 @@ tasks.register('runHistoryReport', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'com.czdr.work.HistoryParserReport'
     args = ['scripts/ethnic-descriptions.tsv']
+}
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-parameters'
 }

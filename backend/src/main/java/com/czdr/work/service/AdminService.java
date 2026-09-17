@@ -61,12 +61,36 @@ public interface AdminService {
 
     Topic getTopic(String id);
 
-    // 审核
-    EasyPageResult<ContentReview> listReviews(String status, Pageable pageable);
+    // 审核（内容审批工作流，对齐 Camunda 8）
+    EasyPageResult<ContentReview> listReviews(String status, String entryType, Pageable pageable);
 
-    void approveReview(String id);
+    /**
+     * 审核员审批通过：上线并流转到内容管理员审查。
+     *
+     * @param id      工作流实例 ID（兼容旧数据时也可传 content_review 记录 ID）
+     * @param opinion 审批意见（必填）
+     */
+    void approveReview(String id, String opinion);
 
+    /**
+     * 审核员退回：交内容编辑修改。
+     */
     void rejectReview(String id, String reason);
+
+    /**
+     * 内容管理员审查通过（内容保持在线，本轮闭环结束）。
+     */
+    void inspectPass(String id, String opinion);
+
+    /**
+     * 内容管理员审查发现问题：内容暂时下线并交内容编辑修改。
+     */
+    void inspectIssue(String id, String reason);
+
+    /**
+     * 内容编辑修改完成，重新提交审核员二次审批。
+     */
+    void reviseAndResubmit(String id, String revisionNote, boolean needReapproval);
 
     // 用户
     EasyPageResult<UserAuth> listUsers(String keyword, Pageable pageable);
@@ -102,5 +126,10 @@ public interface AdminService {
 
     List<ContentStatsResource> statsContent();
 
+    /**
+     * 全量重建审核记录（对齐工作流实例状态）。
+     * <p>已废弃旧的「按内容 status 直接映射」逻辑，改为按 workflow_instance 的真实环节回填，
+     * 避免出现「内容已下线但审核表显示已通过」这类不一致。</p>
+     */
     void initReview();
 }

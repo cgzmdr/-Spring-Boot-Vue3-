@@ -173,6 +173,12 @@ public class RbacDataInitializer implements ApplicationRunner {
         map.put("review:list", "审核列表");
         map.put("review:approve", "审核通过");
         map.put("review:reject", "审核驳回");
+        // 内容审批工作流（Camunda 8）：内容管理员审查与下线、流程建模与部署
+        map.put("review:inspect", "内容审查（审查意见/通过）");
+        map.put("review:offline", "审查发现问题并暂时下线");
+        map.put("workflow:list", "工作流定义查看");
+        map.put("workflow:save", "工作流建模与保存");
+        map.put("workflow:deploy", "工作流部署到引擎");
         map.put("user:list", "用户列表");
         map.put("user:view", "用户详情");
         map.put("user:create", "新建用户");
@@ -244,7 +250,10 @@ public class RbacDataInitializer implements ApplicationRunner {
                 "area:list", "area:create", "area:update", "area:delete",
                 "sport:list", "sport:create", "sport:update", "sport:delete",
                 "source:list", "source:create", "source:update", "source:delete",
-                "credit:list", "credit:update"));
+                "credit:list", "credit:update",
+                // 内容管理员：可审查上线内容、发现问题下线、查看审批过程、维护流程模型
+                "review:list", "review:inspect", "review:offline",
+                "workflow:list", "workflow:save", "workflow:deploy"));
         map.put("editor", List.of(
                 "ethnic:create", "ethnic:update",
                 "festival:create", "festival:update",
@@ -253,8 +262,11 @@ public class RbacDataInitializer implements ApplicationRunner {
                 "area:list", "area:update",
                 "sport:list", "sport:update",
                 "source:list", "source:update",
-                "credit:list", "credit:update"));
-        map.put("reviewer", List.of("review:list", "review:approve", "review:reject", "discussion:review"));
+                "credit:list", "credit:update",
+                // 内容编辑：需要看到前序审批/审查意见，才能按意见修改
+                "review:list"));
+        map.put("reviewer", List.of("review:list", "review:approve", "review:reject",
+                "discussion:review", "workflow:list"));
         map.put("operator", List.of("topic:update", "search:hot:update", "stats:view", "discussion:review"));
         map.put("user", List.of("content:like", "content:favorite", "share:create"));
         return map;

@@ -25,6 +25,19 @@ const routes: RouteRecordRaw[] = [
 				meta: { title: "仪表盘" },
 			},
 			{
+				// 我的待办：内容审批工作流（Camunda 8）的统一入口
+				path: "todo",
+				name: "Todo",
+				component: () => import("@/pages/todo/index.vue"),
+				meta: { title: "我的待办" },
+			},
+			{
+				path: "todo/detail",
+				name: "TodoDetail",
+				component: () => import("@/pages/todo/detail.vue"),
+				meta: { title: "审核处理", hidden: true },
+			},
+			{
 				path: "ethnic",
 				name: "Ethnic",
 				component: () => import("@/pages/ethnic/index.vue"),
@@ -142,7 +155,14 @@ const routes: RouteRecordRaw[] = [
 				path: "review",
 				name: "Review",
 				component: () => import("@/pages/review/index.vue"),
-				meta: { title: "审核管理" },
+				meta: { title: "内容审核" },
+			},
+			{
+				// 网页版 Camunda Modeler：BPMN 流程建模 + Camunda Form 设计
+				path: "modeler",
+				name: "Modeler",
+				component: () => import("@/pages/modeler/index.vue"),
+				meta: { title: "Camunda Modeler" },
 			},
 			{
 				path: "discussion",
@@ -183,7 +203,7 @@ const routes: RouteRecordRaw[] = [
 		component: () => import("@/pages/error/404.vue"),
 		meta: { title: "404", requiresAuth: false },
 	},
-];
+] as const;
 
 const router = createRouter({
 	history: createWebHashHistory(),

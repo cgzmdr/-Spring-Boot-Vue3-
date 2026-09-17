@@ -6,6 +6,39 @@
     </div>
 
     <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" v-loading="loading">
+      <!-- 审批状态提示条：让编辑者知道当前内容处在审批闭环的哪一步 -->
+      <el-alert
+        v-if="isEdit && workflowTask"
+        :type="workflowAlertType"
+        :closable="false"
+        show-icon
+        class="workflow-alert"
+      >
+        <template #title>
+          当前环节：{{ workflowTask.currentStageLabel }}（第 {{ workflowTask.contentVersion }} 版）
+        </template>
+        <div class="workflow-alert-body">
+          <span v-if="workflowTask.currentStage === 'revising'">
+            内容管理员审查发现问题，已在下方保留其审查意见，请修改后到「我的待办」提交二次审批。
+          </span>
+          <span v-else-if="workflowTask.currentStage === 'pending_review'">
+            已提交，等待审核员审批。审批期间内容状态由流程控制，无法手动切换。
+          </span>
+          <span v-else-if="workflowTask.currentStage === 'pending_inspect'">
+            已上线，等待内容管理员审查。
+          </span>
+          <el-button link type="primary" @click="goWorkflow">
+            {{ workflowTask.actionable ? '去处理' : '查看进度' }}
+          </el-button>
+        </div>
+      </el-alert>
+
+      <!-- 前序审批/审查意见：内容编辑修改前必须能看到 -->
+      <div v-if="isEdit && opinions.length" class="opinion-block">
+        <el-divider content-position="left">审批 / 审查意见（供修改参考）</el-divider>
+        <OpinionTimeline :opinions="opinions" />
+      </div>
+
       <el-divider content-position="left">基本信息</el-divider>
       <el-row :gutter="24">
         <el-col :xs="24" :md="12">
@@ -78,7 +111,7 @@
         </el-col>
         <el-col :xs="24" :md="12">
           <el-form-item label="状态">
-            <el-select v-model="form.status" style="width: 100%">
+            <el-select v-model="form.status" style="width: 100%" :disabled="statusLocked">
               <el-option
                 v-for="o in CONTENT_STATUS_OPTIONS.filter((x) => x.value)"
                 :key="o.value"
@@ -86,6 +119,9 @@
                 :value="o.value"
               />
             </el-select>
+            <span v-if="statusLocked" class="form-tip" style="margin-left: 8px">
+              审批中，状态由流程控制
+            </span>
           </el-form-item>
         </el-col>
         <el-col :span="24">
@@ -111,6 +147,25 @@
 
       <el-form-item>
         <el-button type="primary" :loading="submitting" @click="handleSubmit">保存</el-button>
+
+        <!-- 审批闭环操作：保存后提交审批 / 修改完成后重新提交 -->
+        <el-button
+          v-if="isEdit && canSubmitForReview"
+          type="success"
+          :loading="submittingWorkflow"
+          @click="handleSubmitForReview"
+        >
+          {{ form.status === 'offline' || form.status === 'rejected' ? '修改完成，重新提交审批' : '保存并提交审批' }}
+        </el-button>
+        <el-button
+          v-else-if="isEdit && workflowTask && workflowTask.actionable"
+          type="warning"
+          :loading="submittingWorkflow"
+          @click="goWorkflow"
+        >
+          去「我的待办」处理
+        </el-button>
+
         <el-button @click="router.back()">取消</el-button>
       </el-form-item>
     </el-form>
@@ -120,12 +175,21 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Back } from '@element-plus/icons-vue'
 import { createEthnicGroup, getEthnicGroup, updateEthnicGroup } from '@/api/modules/ethnic'
+import {
+  getActiveTask,
+  listWorkflowOpinions,
+  reviseAndResubmit,
+  submitForReview,
+  type WorkflowOpinion,
+  type WorkflowTask
+} from '@/api/modules/workflow'
 import type { EthnicGroup } from '@/api/types'
 import { CONTENT_STATUS_OPTIONS, LANGUAGE_FAMILY_OPTIONS } from '@/constants'
 import ImageUpload from '@/components/ImageUpload.vue'
+import OpinionTimeline from '@/components/OpinionTimeline.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -133,7 +197,38 @@ const router = useRouter()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const submitting = ref(false)
+const submittingWorkflow = ref(false)
 const isEdit = computed(() => !!route.query.id)
+
+/** 当前活跃审批任务（有则表示内容正在流程中） */
+const workflowTask = ref<WorkflowTask | null>(null)
+/** 该内容全部历史审批/审查意见 */
+const opinions = ref<WorkflowOpinion[]>([])
+
+/** 审批中时状态字段由流程掌控，禁止手动切换（后端也会忽略该字段） */
+const statusLocked = computed(
+  () => !!workflowTask.value && workflowTask.value.status === 'running'
+)
+
+/** 可否从本页发起审批：编辑态、没有活跃流程、且当前不是待审核 */
+const canSubmitForReview = computed(() => {
+  if (!isEdit.value) return false
+  if (workflowTask.value) return false
+  return form.status !== 'pending'
+})
+
+const workflowAlertType = computed<'info' | 'warning' | 'success' | 'error'>(() => {
+  switch (workflowTask.value?.currentStage) {
+    case 'revising':
+      return 'error'
+    case 'pending_review':
+      return 'warning'
+    case 'pending_inspect':
+      return 'info'
+    default:
+      return 'success'
+  }
+})
 
 const form = reactive<Partial<EthnicGroup>>({
   name: '',
@@ -171,7 +266,8 @@ async function loadDetail() {
   if (!isEdit.value) return
   loading.value = true
   try {
-    const data = await getEthnicGroup(route.query.id as string)
+    const id = route.query.id as string
+    const data = await getEthnicGroup(id)
     Object.assign(form, data, {
       region: toStr(data.region),
       languages: toStr(data.languages),
@@ -179,8 +275,23 @@ async function loadDetail() {
       religion: toStr(data.religion),
       tags: toStr(data.tags)
     })
+    await loadWorkflow(id)
   } finally {
     loading.value = false
+  }
+}
+
+/** 拉当前审批任务与历史意见（失败不阻塞编辑） */
+async function loadWorkflow(id: string) {
+  try {
+    workflowTask.value = await getActiveTask('ethnic', id)
+  } catch {
+    workflowTask.value = null
+  }
+  try {
+    opinions.value = (await listWorkflowOpinions('ethnic', id)) || []
+  } catch {
+    opinions.value = []
   }
 }
 
@@ -202,5 +313,68 @@ async function handleSubmit() {
   }
 }
 
+/**
+ * 保存并提交审批。
+ * 若内容处于「待修改」环节（内容管理员审查发现问题下线过），
+ * 先保存内容，再调用工作流的「修改完成」动作把任务交回审核员二次审批。
+ */
+async function handleSubmitForReview() {
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  const isRevision = form.status === 'offline' || form.status === 'rejected'
+  try {
+    await ElMessageBox.confirm(
+      isRevision
+        ? '将先保存本次修改，然后把任务重新提交给审核员二次审批。确定继续？'
+        : '将先保存内容，然后提交进入审批流程（内容状态变为待审核）。确定继续？',
+      isRevision ? '修改完成并重新提交' : '保存并提交审批',
+      { type: 'info', confirmButtonText: '确定' }
+    )
+  } catch {
+    return
+  }
+
+  submittingWorkflow.value = true
+  try {
+    const id = route.query.id as string
+    // 审批中不允许改状态，这里保留原状态提交，避免把 offline 直接改成 published 绕过流程
+    await updateEthnicGroup(id, { ...form, status: form.status } as Partial<EthnicGroup>)
+
+    if (workflowTask.value && workflowTask.value.currentStage === 'revising') {
+      await reviseAndResubmit(workflowTask.value.instanceId, '内容编辑已在内容编辑页完成修改', true)
+      ElMessage.success('修改已保存并提交审核员二次审批')
+    } else {
+      await submitForReview('ethnic', id, '内容编辑提交审批')
+      ElMessage.success('已提交审批，请到「我的待办」跟进')
+    }
+    await loadWorkflow(id)
+  } finally {
+    submittingWorkflow.value = false
+  }
+}
+
+function goWorkflow() {
+  if (!workflowTask.value) return
+  router.push({ path: '/todo/detail', query: { instanceId: workflowTask.value.instanceId } })
+}
+
 onMounted(loadDetail)
 </script>
+
+<style scoped lang="scss">
+.workflow-alert {
+  margin-bottom: 16px;
+
+  .workflow-alert-body {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+}
+
+.opinion-block {
+  margin-bottom: 8px;
+}
+</style>

@@ -25,6 +25,24 @@ export interface EthnicListItem {
 	summary: string;
 	coverImage: string | null;
 	themeColor: string;
+
+	// ==================== 信息量增强：关联内容计数 ====================
+	/** 关联艺术/非遗条目数 */
+	artCount: number;
+	/** 关联节日数 */
+	festivalCount: number;
+	/** 关联美食数 */
+	foodCount: number;
+	/** 关联风俗条目数 */
+	customCount: number;
+	/** 聚居地数量 */
+	locationCount: number;
+	/** 关联人物数 */
+	personCount: number;
+	/** 自治地方数量（以该民族为自治民族） */
+	autonomousAreaCount: number;
+	/** 人口排名（1 = 人口最多，基于七普口径） */
+	populationRank: number;
 }
 
 /** 民族全家福简略项 */
@@ -525,8 +543,7 @@ export interface ArtBrief {
 }
 
 /** 民族详情 */
-export interface EthnicDetail {
-	id: string;
+export interface EthnicDetail {	id: string;
 	slug: string;
 	name: string;
 	nameEn: string;
@@ -556,6 +573,44 @@ export interface EthnicDetail {
 	arts: ArtBrief[];
 	/** 历史沿革结构化（方向 C-2）：时间轴 / 时代分期 / 段落索引 */
 	history?: EthnicHistory;
+
+	// ==================== 信息量增强：关联信息 ====================
+	/** 关联人物档案（按民族名匹配 person_profile.ethnic_group_name） */
+	persons?: EthnicRelatedPerson[];
+	/** 民族自治地方（自主区/州/县·旗，按级别排序） */
+	autonomousAreas?: EthnicRelatedArea[];
+	/** 人口排名（1 = 人口最多，基于七普口径）；0 表示未能计算 */
+	populationRank?: number;
+	/** 参与排名的民族总数（已发布），用于「第 N / 总」表述 */
+	populationTotal?: number;
+}
+
+/** 民族详情关联人物 */
+export interface EthnicRelatedPerson {
+	id: string;
+	personName: string;
+	ethnicGroupName: string | null;
+	/** inheritor 代表性传承人 / master 历史文化名家 */
+	roleType: string | null;
+	/** 领域，如 技艺 / 音乐 / 舞蹈 */
+	domain: string | null;
+	bio: string | null;
+	lifespan: string | null;
+}
+
+/** 民族详情关联自治地方 */
+export interface EthnicRelatedArea {
+	id: string;
+	name: string;
+	/** autonomous_region 自治区 / autonomous_prefecture 自治州 / autonomous_county 自治县·旗 */
+	level: string;
+	/** JSON 数组字符串，如 ["壮族"] */
+	ethnicGroups: string | null;
+	province: string | null;
+	/** 成立年份 */
+	establishedYear: number | null;
+	/** 政府驻地 */
+	seat: string | null;
 }
 
 /* ---------------------------------------------------------------------------

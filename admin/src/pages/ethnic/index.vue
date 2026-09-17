@@ -45,12 +45,30 @@
         <template #default="{ row }">{{ formatNumber(row.population) }}</template>
       </el-table-column>
       <el-table-column prop="languageFamily" label="语系" min-width="100" />
-      <el-table-column label="状态" width="90">
+      <el-table-column label="状态" width="110">
         <template #default="{ row }">
           <StatusTag
             :label="CONTENT_STATUS_MAP[row.status]?.label || row.status || '-'"
             :tag="CONTENT_STATUS_MAP[row.status]?.tag || 'info'"
           />
+        </template>
+      </el-table-column>
+      <el-table-column label="审批环节" width="150">
+        <template #default="{ row }">
+          <el-tag
+            v-if="stageOf(row as EthnicGroup)"
+            size="small"
+            :type="stageTagOf(row as EthnicGroup)"
+            effect="plain"
+          >
+            {{ stageOf(row as EthnicGroup) }}
+          </el-tag>
+          <span v-else class="muted">-</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="版本" width="80">
+        <template #default="{ row }">
+          <span class="version-badge">v{{ row.contentVersion ?? 0 }}</span>
         </template>
       </el-table-column>
       <el-table-column label="更新时间" width="160">
@@ -59,9 +77,28 @@
       <el-table-column label="浏览量" width="90">
         <template #default="{ row }">{{ row.viewCount ?? '-' }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="150" fixed="right">
+      <el-table-column label="操作" width="230" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="goEdit(row as EthnicGroup)">编辑</el-button>
+
+          <!-- 审批闭环入口：提交审批 / 去处理 / 查看进度 -->
+          <el-button
+            v-if="canSubmit(row as EthnicGroup)"
+            link
+            type="success"
+            @click="handleSubmit(row as EthnicGroup)"
+          >
+            提交审批
+          </el-button>
+          <el-button
+            v-else-if="taskOf(row as EthnicGroup)"
+            link
+            type="warning"
+            @click="goTask(row as EthnicGroup)"
+          >
+            {{ taskOf(row as EthnicGroup)?.actionable ? '去处理' : '查看进度' }}
+          </el-button>
+
           <el-button link type="danger" @click="handleDelete(row as EthnicGroup)">删除</el-button>
         </template>
       </el-table-column>
@@ -91,6 +128,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { deleteEthnicGroup, listEthnicGroups, type EthnicQuery } from '@/api/modules/ethnic'
 import { getViewCounts } from '@/api/modules/stats'
+import { getActiveTask, submitForReview, type WorkflowTask } from '@/api/modules/workflow'
 import type { EthnicGroup } from '@/api/types'
 import { CONTENT_STATUS_MAP, CONTENT_STATUS_OPTIONS } from '@/constants'
 import StatusTag from '@/components/StatusTag.vue'
@@ -107,6 +145,10 @@ const query = ref<EthnicQuery>({ keyword: '', status: '' })
 const page = ref(0)
 const size = ref(10)
 
+/** entryId -> 当前活跃待办（用于列表上直接展示审批环节并进入处理页） */
+const taskMap = ref<Record<string, WorkflowTask | null>>({})
+const submitting = ref('')
+
 async function loadData() {
   loading.value = true
   try {
@@ -118,10 +160,77 @@ async function loadData() {
     })
     list.value = res.data || []
     total.value = res.total || 0
-    await loadViewCounts()
+    await Promise.all([loadViewCounts(), loadWorkflowTasks()])
   } finally {
     loading.value = false
   }
+}
+
+/**
+ * 批量拉取当前页内容的审批待办。
+ * 后端按内容逐个查询，这里并发发起、失败降级为空，
+ * 保证列表在流程引擎短暂不可用时仍能正常展示。
+ */
+async function loadWorkflowTasks() {
+  const entries = list.value.map((r) => uuidToStr(r.id))
+  const next: Record<string, WorkflowTask | null> = {}
+  await Promise.all(
+    entries.map(async (id) => {
+      try {
+        next[id] = await getActiveTask('ethnic', id)
+      } catch {
+        next[id] = null
+      }
+    })
+  )
+  taskMap.value = next
+}
+
+function taskOf(row: EthnicGroup): WorkflowTask | null {
+  return taskMap.value[uuidToStr(row.id)] ?? null
+}
+
+function stageOf(row: EthnicGroup): string {
+  return taskOf(row)?.currentStageLabel || ''
+}
+
+function stageTagOf(row: EthnicGroup): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
+  const stage = taskOf(row)?.currentStage
+  if (stage === 'revising') return 'danger'
+  if (stage === 'pending_review' || stage === 'pending_inspect') return 'warning'
+  return 'info'
+}
+
+/** 是否可提交审批：非审批中、非在线的草稿/已下线/已驳回内容 */
+function canSubmit(row: EthnicGroup): boolean {
+  if (taskOf(row)) return false
+  return row.status !== 'pending'
+}
+
+async function handleSubmit(row: EthnicGroup) {
+  try {
+    await ElMessageBox.confirm(
+      `确定提交「${row.name}」进入审批流程吗？提交后内容状态将变为「待审核」，需审核员审批后才能上线。`,
+      '提交审批',
+      { type: 'info', confirmButtonText: '提交审批' }
+    )
+  } catch {
+    return
+  }
+  submitting.value = uuidToStr(row.id)
+  try {
+    await submitForReview('ethnic', uuidToStr(row.id), `由 ${row.name} 管理列表提交审批`)
+    ElMessage.success('已提交审批，请到「我的待办」跟进')
+    await loadData()
+  } finally {
+    submitting.value = ''
+  }
+}
+
+function goTask(row: EthnicGroup) {
+  const task = taskOf(row)
+  if (!task) return
+  router.push({ path: '/todo/detail', query: { instanceId: task.instanceId } })
 }
 
 /** 批量合并当前页民族浏览量 */
@@ -189,5 +298,19 @@ onMounted(loadData)
   margin-top: 12px;
   font-size: 13px;
   color: #6b7280;
+}
+
+.version-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.muted {
+  color: #9ca3af;
 }
 </style>

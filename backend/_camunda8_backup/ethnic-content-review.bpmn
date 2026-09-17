@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  xmlns:zeebe="http://camunda.org/schema/zeebe/1.0"
+                  xmlns:modeler="http://camunda.org/schema/modeler/1.0"
+                  id="Definitions_ethnic_review"
+                  targetNamespace="http://bpmn.io/schema/bpmn"
+                  exporter="56民族-OA 内置 Modeler"
+                  exporterVersion="1.0.0"
+                  modeler:executionPlatform="Camunda Cloud"
+                  modeler:executionPlatformVersion="8.9.0">
+  <bpmn:process id="ethnic-content-review" name="民族内容审批流程" isExecutable="true">
+    <bpmn:documentation>民族内容审批闭环：内容编辑提交 → 审核员审批（留审批意见）→ 上线 → 内容管理员审查（留审查意见）
+      → 有问题则暂时下线 → 内容编辑修改（可看前序意见）→ 审核员二次审批 → 重新上线 → 内容管理员再审查 → ……</bpmn:documentation>
+
+    <!-- ============ 内容编辑提交（由 OA 提交动作直接启动流程，走开始事件） ============ -->
+    <bpmn:startEvent id="StartEvent_Submitted" name="内容编辑提交审批">
+      <bpmn:outgoing>Flow_Submit_ToReview</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:sequenceFlow id="Flow_Submit_ToReview" sourceRef="StartEvent_Submitted" targetRef="Task_ReviewerApprove" />
+
+    <!-- ============ 审核员审批（第一次/第 N 次） ============ -->
+    <bpmn:userTask id="Task_ReviewerApprove" name="审核员审批" zeebe:assignee="reviewer" zeebe:candidateGroups="reviewer">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="ethnic-approval-form" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="stage" value="pending_review" />
+          <zeebe:header key="role" value="reviewer" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Submit_ToReview</bpmn:incoming>
+      <bpmn:incoming>Flow_Revise_ToReview</bpmn:incoming>
+      <bpmn:outgoing>Flow_Review_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:sequenceFlow id="Flow_Review_Gateway" sourceRef="Task_ReviewerApprove" targetRef="Gateway_Approved" />
+
+    <!-- ============ 审批结论网关：通过→上线；退回→编辑修改 ============ -->
+    <bpmn:exclusiveGateway id="Gateway_Approved" name="审批通过？" default="Flow_Review_Rejected">
+      <bpmn:incoming>Flow_Review_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Review_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Review_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_Review_Approved" name="通过" sourceRef="Gateway_Approved" targetRef="Task_Publish">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">= approved = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_Review_Rejected" name="退回修改" sourceRef="Gateway_Approved" targetRef="Task_EditorRevise" />
+
+    <!-- ============ 内容上线（系统任务） ============ -->
+    <bpmn:serviceTask id="Task_Publish" name="内容上线">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="content-publish" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Review_Approved</bpmn:incoming>
+      <bpmn:incoming>Flow_Revise_ToPublish</bpmn:incoming>
+      <bpmn:outgoing>Flow_Publish_ToInspect</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_Publish_ToInspect" sourceRef="Task_Publish" targetRef="Task_ContentInspect" />
+
+    <!-- ============ 内容管理员审查 ============ -->
+    <bpmn:userTask id="Task_ContentInspect" name="内容管理员审查" zeebe:assignee="content_admin" zeebe:candidateGroups="content_admin">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="ethnic-inspection-form" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="stage" value="pending_inspect" />
+          <zeebe:header key="role" value="content_admin" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Publish_ToInspect</bpmn:incoming>
+      <bpmn:outgoing>Flow_Inspect_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:sequenceFlow id="Flow_Inspect_Gateway" sourceRef="Task_ContentInspect" targetRef="Gateway_HasIssue" />
+
+    <!-- ============ 审查结论网关：无问题→结束；有问题→暂时下线 ============ -->
+    <bpmn:exclusiveGateway id="Gateway_HasIssue" name="审查发现问题？" default="Flow_Inspect_Ok">
+      <bpmn:incoming>Flow_Inspect_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Inspect_Issue</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Inspect_Ok</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_Inspect_Issue" name="有问题，暂时下线" sourceRef="Gateway_HasIssue" targetRef="Task_Offline">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">= hasIssue = true</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_Inspect_Ok" name="无问题，本轮结束" sourceRef="Gateway_HasIssue" targetRef="EndEvent_Inspected" />
+
+    <bpmn:endEvent id="EndEvent_Inspected" name="审查通过，保持在线">
+      <bpmn:incoming>Flow_Inspect_Ok</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ============ 暂时下线（系统任务） ============ -->
+    <bpmn:serviceTask id="Task_Offline" name="内容暂时下线">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="content-offline" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Inspect_Issue</bpmn:incoming>
+      <bpmn:outgoing>Flow_Offline_ToRevise</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_Offline_ToRevise" sourceRef="Task_Offline" targetRef="Task_EditorRevise" />
+
+    <!-- ============ 内容编辑修改（承接两条入口：审批退回 / 审查发现问题下线） ============ -->
+    <bpmn:userTask id="Task_EditorRevise" name="内容编辑修改" zeebe:assignee="editor" zeebe:candidateGroups="editor">
+      <bpmn:extensionElements>
+        <zeebe:userTask />
+        <zeebe:formDefinition formId="ethnic-revision-form" />
+        <zeebe:taskHeaders>
+          <zeebe:header key="stage" value="revising" />
+          <zeebe:header key="role" value="editor" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_Review_Rejected</bpmn:incoming>
+      <bpmn:incoming>Flow_Offline_ToRevise</bpmn:incoming>
+      <bpmn:outgoing>Flow_Revise_Gateway</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:sequenceFlow id="Flow_Revise_Gateway" sourceRef="Task_EditorRevise" targetRef="Gateway_Resubmit" />
+
+    <!-- ============ 修改完成网关：二次审批 / 直接重新上线（仅下线场景） ============ -->
+    <bpmn:exclusiveGateway id="Gateway_Resubmit" name="需要再次审批？" default="Flow_Revise_ToReview">
+      <bpmn:incoming>Flow_Revise_Gateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Revise_ToReview</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Revise_ToPublish</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="Flow_Revise_ToReview" name="交审核员二次审批" sourceRef="Gateway_Resubmit" targetRef="Task_ReviewerApprove" />
+
+    <bpmn:sequenceFlow id="Flow_Revise_ToPublish" name="直接重新上线" sourceRef="Gateway_Resubmit" targetRef="Task_Publish">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">= needReapproval = false</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="ethnic-content-review">
+      <bpmndi:BPMNShape id="StartEvent_Submitted_di" bpmnElement="StartEvent_Submitted">
+        <dc:Bounds x="152" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="128" y="225" width="84" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_ReviewerApprove_di" bpmnElement="Task_ReviewerApprove" isExpanded="true">
+        <dc:Bounds x="250" y="160" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Approved_di" bpmnElement="Gateway_Approved" isMarkerVisible="true">
+        <dc:Bounds x="405" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="398" y="145" width="64" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Publish_di" bpmnElement="Task_Publish">
+        <dc:Bounds x="510" y="160" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_ContentInspect_di" bpmnElement="Task_ContentInspect">
+        <dc:Bounds x="660" y="160" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_HasIssue_di" bpmnElement="Gateway_HasIssue" isMarkerVisible="true">
+        <dc:Bounds x="805" y="175" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="795" y="145" width="71" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_Offline_di" bpmnElement="Task_Offline">
+        <dc:Bounds x="905" y="335" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Task_EditorRevise_di" bpmnElement="Task_EditorRevise">
+        <dc:Bounds x="730" y="335" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Gateway_Resubmit_di" bpmnElement="Gateway_Resubmit" isMarkerVisible="true">
+        <dc:Bounds x="585" y="350" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="573" y="320" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="EndEvent_Inspected_di" bpmnElement="EndEvent_Inspected">
+        <dc:Bounds x="1062" y="182" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1040" y="225" width="81" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNEdge id="Flow_Submit_ToReview_di" bpmnElement="Flow_Submit_ToReview">
+        <di:waypoint x="188" y="200" />
+        <di:waypoint x="250" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Review_Gateway_di" bpmnElement="Flow_Review_Gateway">
+        <di:waypoint x="350" y="200" />
+        <di:waypoint x="405" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Review_Approved_di" bpmnElement="Flow_Review_Approved">
+        <di:waypoint x="455" y="200" />
+        <di:waypoint x="510" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="468" y="182" width="28" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Review_Rejected_di" bpmnElement="Flow_Review_Rejected">
+        <di:waypoint x="430" y="225" />
+        <di:waypoint x="430" y="375" />
+        <di:waypoint x="585" y="375" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="480" y="357" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Publish_ToInspect_di" bpmnElement="Flow_Publish_ToInspect">
+        <di:waypoint x="610" y="200" />
+        <di:waypoint x="660" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Inspect_Gateway_di" bpmnElement="Flow_Inspect_Gateway">
+        <di:waypoint x="760" y="200" />
+        <di:waypoint x="805" y="200" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Inspect_Ok_di" bpmnElement="Flow_Inspect_Ok">
+        <di:waypoint x="855" y="200" />
+        <di:waypoint x="1062" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="930" y="182" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Inspect_Issue_di" bpmnElement="Flow_Inspect_Issue">
+        <di:waypoint x="830" y="225" />
+        <di:waypoint x="830" y="375" />
+        <di:waypoint x="730" y="375" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="836" y="290" width="91" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Offline_ToRevise_di" bpmnElement="Flow_Offline_ToRevise">
+        <di:waypoint x="905" y="375" />
+        <di:waypoint x="830" y="375" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Revise_Gateway_di" bpmnElement="Flow_Revise_Gateway">
+        <di:waypoint x="730" y="375" />
+        <di:waypoint x="635" y="375" />
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Revise_ToReview_di" bpmnElement="Flow_Revise_ToReview">
+        <di:waypoint x="610" y="350" />
+        <di:waypoint x="610" y="200" />
+        <di:waypoint x="350" y="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="435" y="292" width="98" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+
+      <bpmndi:BPMNEdge id="Flow_Revise_ToPublish_di" bpmnElement="Flow_Revise_ToPublish">
+        <di:waypoint x="585" y="375" />
+        <di:waypoint x="560" y="375" />
+        <di:waypoint x="560" y="240" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="512" y="292" width="84" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

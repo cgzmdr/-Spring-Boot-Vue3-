@@ -116,13 +116,17 @@ public class EthnicController {
      * <p>返回完整民族信息，含 customs / festivals / arts / foods / locations 各维度。
      * 另含 {@code history}：由【历史沿革】小节解析出的时间轴 / 时代分期 / 段落索引（方向 C-2），
      * 只收录原文写出明确年份的段落，不做年份推断。</p>
+     * <p>并含关联信息：{@code persons}（关联人物档案）、{@code autonomousAreas}（民族自治地方）、
+     * {@code populationRank} / {@code populationTotal}（人口排名），
+     * 用于详情页的「相关人物」「自治地方」「人口定位」区块。</p>
      */
-    @Operation(summary = "民族详情", description = "按 ID 查询民族完整信息（含习俗、节日、艺术、美食、聚居地、历史沿革等维度）")
+    @Operation(summary = "民族详情", description = "按 ID 查询民族完整信息（含习俗、节日、艺术、美食、聚居地、历史沿革、关联人物与自治地方）")
     @GetMapping("{id}")
     Result<EthnicInfoDetailedResource> find(@PathVariable @Parameter(description = "民族 ID") String id) {
         EthnicGroup ethnicGroup = ethnicService.find(id);
         return Result.success(EthnicConvert.toInfoDetailedModel(
                 ethnicGroup,
-                ethnicHistoryParser.parse(ethnicGroup.getDescription())));
+                ethnicHistoryParser.parse(ethnicGroup.getDescription()),
+                ethnicService.relatedOf(ethnicGroup)));
     }
 }

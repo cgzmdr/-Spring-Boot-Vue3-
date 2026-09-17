@@ -39,4 +39,17 @@ public interface EthnicService {
      * @param topN 人口榜单取前 N 名
      */
     EthnicPopulationStatsResource findPopulationStats(int topN);
+
+    /**
+     * 民族详情的关联信息：关联人物、自治地方、人口排名。
+     *
+     * <p>把库中已存在、但详情页原先未展示的两个关联维度补齐：</p>
+     * <ul>
+     *   <li>人物按 {@code person_profile.ethnic_group_name} 与民族名匹配；</li>
+     *   <li>自治地方按 {@code autonomous_area.ethnic_groups}（JSON 数组）匹配。</li>
+     * </ul>
+     *
+     * @param ethnicGroup 目标民族（用其名称做关联匹配）
+     */
+    com.czdr.work.model.more.EthnicRelated relatedOf(EthnicGroup ethnicGroup);
 }
