@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive } from "vue";
+import { ref, onMounted, computed, defineAsyncComponent } from "vue";
 import { ElIcon, ElMessage } from "element-plus";
 import { Warning, ArrowRight } from "@element-plus/icons-vue";
 import SectionRule from "@/components/SectionRule.vue";
@@ -12,7 +12,6 @@ import {
 	artApi,
 	topicApi,
 	formApi,
-	feedbackApi,
 } from "@/api/modules";
 import type {
 	EthnicBrief,
@@ -20,11 +19,23 @@ import type {
 	FestivalListItem,
 	ArtListItem,
 	TopicListItem,
-	FeedBackFormType,
 } from "@/api/types";
 import { useLangStore } from "@/stores/lang";
 import { useRouter } from "vue-router";
 import { fadeUp, stagger } from "@/utils/motion";
+
+/**
+ * 反馈弹窗按需加载。
+ *
+ * 它内部是一整套 Element Plus 表单组件（dialog / form / input / select /
+ * date-picker / button），只有点击右下角「反馈」才会用到。
+ * 之前内联在本页，等于让每个 3G 用户在首屏就下载一个可能永远不打开的弹窗。
+ */
+const FeedbackDialog = defineAsyncComponent(
+	() => import("@/components/FeedbackDialog.vue"),
+);
+/** 弹窗是否已挂载（首次点击时才置位，避免拖慢首屏） */
+const feedbackMounted = ref(false);
 
 const lang = useLangStore();
 const centerDialogVisible = ref(false);
@@ -35,16 +46,8 @@ const topics = ref<TopicListItem[]>([]);
 /** 人口可视化（七普口径） */
 const popStats = ref<EthnicPopulationStats | null>(null);
 const loading = ref(false);
-const submitting = ref(false);
-const schema = ref();
-const form = reactive<FeedBackFormType>({
-	name: "",
-	contact: "",
-	topic: "bug",
-	rating: "good",
-	content: "",
-	visitDate: "",
-});
+/** 反馈表单 schema（由后端下发，仅在用户打开弹窗时才需要） */
+const schemaJson = ref<string | null>(null);
 /** 首页固定专题（后端 /topics 为空时兜底） */
 const staticFeatures = computed(() => [
 	{
@@ -91,8 +94,7 @@ onMounted(async () => {
 			formApi.getByCode("feedback"),
 			ethnicApi.populationStats(8),
 		]);
-		if (formRes.status === "fulfilled")
-			schema.value = JSON.parse(formRes.value.schema);
+		if (formRes.status === "fulfilled") schemaJson.value = formRes.value.schema;
 
 		if (briefs.status === "fulfilled") {
 			ethnicBriefs.value = briefs.value.data;
@@ -131,61 +133,13 @@ function cardMotion(index: number) {
 	return fadeUp({ delay: stagger(index, 70), distance: 18 });
 }
 
-/** 访问日期统一为 YYYY-MM-DD（el-date-picker 返回 Date 对象） */
-function formatDate(d: unknown): string {
-	if (!d) return "";
-	const date = new Date(d as string | number | Date);
-	if (Number.isNaN(date.getTime())) return String(d);
-	const pad = (n: number) => String(n).padStart(2, "0");
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-/** 提交反馈表单到后端 */
-async function handleSubmit() {
-	if (!schema.value) {
-		ElMessage.warning("反馈表单未加载，请刷新页面后重试");
-		return;
-	}
-	const required = new Set<string>(
-		(schema.value.fields || [])
-			.filter((f: { required?: boolean }) => f.required)
-			.map((f: { key: string }) => f.key),
-	);
-	if (required.has("name") && !form.name.trim()) {
-		ElMessage.warning("请填写您的称呼");
-		return;
-	}
-	if (required.has("topic") && !form.topic) {
-		ElMessage.warning("请选择反馈类型");
-		return;
-	}
-	if (required.has("content") && !form.content.trim()) {
-		ElMessage.warning("请填写反馈内容");
-		return;
-	}
-	submitting.value = true;
-	try {
-		await feedbackApi.submit({
-			name: form.name.trim(),
-			contact: form.contact.trim(),
-			topic: form.topic,
-			rating: form.rating,
-			content: form.content.trim(),
-			visitDate: formatDate(form.visitDate),
-		});
-		ElMessage.success("反馈提交成功，感谢您的建议！");
-		centerDialogVisible.value = false;
-		form.name = "";
-		form.contact = "";
-		form.topic = "bug";
-		form.rating = "good";
-		form.content = "";
-		form.visitDate = "";
-	} catch {
-		// 错误提示由请求拦截器统一弹出
-	} finally {
-		submitting.value = false;
-	}
+/**
+ * 打开反馈弹窗（按需挂载异步组件）。
+ * 提交逻辑已内聚到 FeedbackDialog 内。
+ */
+function openFeedback() {
+	feedbackMounted.value = true;
+	centerDialogVisible.value = true;
 }
 </script>
 
@@ -234,6 +188,8 @@ async function handleSubmit() {
 					size="landscape_16_9"
 					name="五十六个民族"
 					:theme="'#B6402E'"
+					loading="eager"
+					fetchpriority="high"
 				/>
 				<figcaption>
 					{{
@@ -409,97 +365,28 @@ async function handleSubmit() {
 	</section>
 
 	<div class="aside-btn">
+		<!--
+			反馈入口。原先用 <el-tooltip> 做鼠标提示，会把整条 popper 链
+			（ElTooltip / ElPopper / ElFocusTrap）算进首屏；改用原生 title，
+			同样有提示且零开销。详见 docs/performance-3g.md。
+		-->
 		<div
 			class="feedback"
-			@click="centerDialogVisible = true"
+			:title="lang.pick('反馈', 'Feedback')"
+			@click="openFeedback"
 		>
-			<el-tooltip
-				class="box-item"
-				effect="light"
-				content="反馈"
-				placement="left"
-			>
-				<el-icon size="24">
-					<Warning />
-				</el-icon>
-			</el-tooltip>
+			<el-icon size="24">
+				<Warning />
+			</el-icon>
 		</div>
 	</div>
-	<el-dialog
+
+	<!-- 反馈弹窗：按需加载（含整套表单组件） -->
+	<FeedbackDialog
+		v-if="feedbackMounted"
 		v-model="centerDialogVisible"
-		title="反馈"
-		width="500"
-		align-center
-	>
-		<el-form
-			:model="form"
-			label-width="auto"
-			style="max-width: 600px"
-		>
-			<el-form-item
-				v-for="field in schema.fields"
-				:key="field.key"
-				:label="field.placeholder || field.label"
-				:required="field.required"
-			>
-				<el-input
-					v-model="form.name"
-					v-if="field.key === 'name'"
-					:placeholder="field.label"
-				/>
-				<el-input
-					v-model="form.contact"
-					v-if="field.key === 'contact'"
-					:placeholder="field.label"
-				/>
-				<el-select
-					v-model="form.topic"
-					v-if="field.key === 'topic'"
-				>
-					<el-option
-						v-for="value in field.options"
-						:label="value.label"
-						:value="value.value"
-					/>
-				</el-select>
-				<el-select
-					v-model="form.rating"
-					v-if="field.key === 'rating'"
-				>
-					<el-option
-						v-for="value in field.options"
-						:label="value.label"
-						:value="value.value"
-					/>
-				</el-select>
-				<el-input
-					v-model="form.content"
-					v-if="field.key === 'content'"
-					:placeholder="field.label"
-					type="textarea"
-				/>
-				<el-date-picker
-					v-if="field.key === 'visitDate'"
-					v-model="form.visitDate"
-					type="date"
-					:placeholder="field.label"
-					clearable
-				/>
-			</el-form-item>
-		</el-form>
-		<template #footer>
-			<div class="dialog-footer">
-				<el-button @click="centerDialogVisible = false">关闭</el-button>
-				<el-button
-					type="primary"
-					:loading="submitting"
-					@click="handleSubmit"
-				>
-					提交
-				</el-button>
-			</div>
-		</template>
-	</el-dialog>
+		:schema-json="schemaJson"
+	/>
 </template>
 
 <style scoped>

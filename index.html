@@ -5,10 +5,150 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="走进多彩 56 个民族世界 —— 一站式、沉浸式、可探索的中华民族数字文化博物馆。" />
+    <meta name="theme-color" content="#B6402E" />
     <title>%VITE_APP_TITLE%</title>
+
+    <!--
+      移动端 / 慢网优化（3G 目标）
+      · 首屏关键 CSS 内联：主样式表（约 80 KB 未压缩）下载完成前，页面已有正确的背景、
+        报头轮廓与版心宽度。否则慢网下用户会先看到一片纯白（FOUC），主观「卡」感极强。
+      · 静态骨架 #boot-skeleton：JS 下载/解析期间呈现站点轮廓，挂载后由 main.ts 移除。
+        纯 HTML+CSS 实现，不依赖任何资源，因此必然早于 JS 可见。
+      · 封面图 preload：首屏最大的绘制元素，提前发起请求以缩短 LCP。
+    -->
+    <style>
+      :root {
+        --ink: #1b1b1b;
+        --paper: #fbf9f5;
+        --paper-2: #f3efe7;
+        --line: #e2dbcd;
+        --accent: #b6402e;
+        --muted: #6d6559;
+        --serif: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        font-size: 16px;
+        line-height: 1.7;
+      }
+      #app:empty {
+        display: none;
+      }
+      /*
+        骨架：**只在 #app 为空时才显示**。
+        判定完全交给 CSS（`:empty` 兄弟选择器），不依赖任何 JS ——
+        这一点对预渲染至关重要：
+        · 预渲染页面里 #app 已有直出正文，骨架自动隐藏，用户立刻看到内容；
+        · 纯 SPA 兜底页 #app 为空，骨架照常显示，覆盖 JS 下载期。
+        若改成「靠 JS 主动移除骨架」，在 JS 被禁用或加载失败时，
+        这个 position:fixed 的全屏遮罩会**永久盖住**已经直出的正文 ——
+        比不做预渲染还糟（HTML 里有内容，人却看不见）。
+      */
+      #boot-skeleton {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        padding: 24px;
+        background: var(--paper);
+        transition: opacity 0.28s ease-out;
+      }
+      /* #app 为空（未预渲染 / 尚未挂载）→ 显示骨架 */
+      #app:empty + #boot-skeleton {
+        display: flex;
+      }
+      /* 客户端挂载完成后由脚本加上，做淡出 */
+      #boot-skeleton.is-gone {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .bs-mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: 2px solid var(--line);
+        border-top-color: var(--accent);
+        animation: bs-spin 0.9s linear infinite;
+      }
+      .bs-title {
+        font-family: var(--serif);
+        font-size: 19px;
+        letter-spacing: 3px;
+        color: var(--ink);
+        text-align: center;
+      }
+      .bs-sub {
+        font-size: 12px;
+        letter-spacing: 1px;
+        color: var(--muted);
+      }
+      .bs-bar {
+        width: min(220px, 60vw);
+        height: 3px;
+        border-radius: 2px;
+        background: var(--paper-2);
+        overflow: hidden;
+      }
+      .bs-bar i {
+        display: block;
+        width: 40%;
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        animation: bs-slide 1.25s ease-in-out infinite;
+      }
+      @keyframes bs-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes bs-slide {
+        0% {
+          transform: translateX(-105%);
+        }
+        100% {
+          transform: translateX(255%);
+        }
+      }
+      /* 尊重系统「减少动态效果」偏好：不播放动画，只留静态信息 */
+      @media (prefers-reduced-motion: reduce) {
+        .bs-mark,
+        .bs-bar i {
+          animation: none;
+        }
+      }
+    </style>
+    <link
+      rel="preload"
+      as="image"
+      href="/images/placeholders/placeholder.webp"
+      fetchpriority="high"
+    />
   </head>
   <body>
     <div id="app"></div>
+    <div id="boot-skeleton" role="status" aria-live="polite" aria-label="页面加载中">
+      <div class="bs-mark" aria-hidden="true"></div>
+      <div class="bs-title">走进多彩 56 民族世界</div>
+      <div class="bs-bar" aria-hidden="true"><i></i></div>
+      <div class="bs-sub">正在加载内容…</div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

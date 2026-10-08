@@ -1,0 +1,389 @@
+﻿art	1	id	uuid		N	gen_random_uuid()	N
+art	2	slug	character varying	64	N		N
+art	3	ethnic_group_id	uuid		Y		N
+art	4	name	character varying	128	N		N
+art	5	name_en	character varying	128	Y		N
+art	6	category	character varying	20	N		N
+art	7	intangible_heritage	character varying	20	Y		N
+art	8	description	text		Y		N
+art	9	inheritors	jsonb		N	'[]'::jsonb	N
+art	10	cover_image	text		Y		N
+art	11	status	character varying	20	N	'draft'::character varying	N
+art	12	order_num	integer		N	0	N
+art	13	created_by	uuid		Y		N
+art	14	updated_by	uuid		Y		N
+art	15	created_at	timestamp with time zone		N	now()	N
+art	16	updated_at	timestamp with time zone		N	now()	N
+art	17	origin	text		Y		N
+art	18	description_en	text		Y		N
+art	19	description_en_source	character varying	32	Y		N
+art	20	content_version	integer		N	0	N
+autonomous_area	1	id	uuid		N	gen_random_uuid()	Y
+autonomous_area	2	name	character varying	128	N		N
+autonomous_area	3	level	character varying	32	N		N
+autonomous_area	4	ethnic_groups	jsonb		N	'[]'::jsonb	N
+autonomous_area	5	province	character varying	64	Y		N
+autonomous_area	6	established_year	integer		Y		N
+autonomous_area	7	seat	character varying	64	Y		N
+autonomous_area	8	created_at	timestamp with time zone		N	now()	N
+autonomous_area	9	updated_at	timestamp with time zone		N	now()	N
+content_review	1	id	uuid		N	gen_random_uuid()	N
+content_review	2	entry_type	character varying	20	N		N
+content_review	3	entry_id	uuid		N		N
+content_review	4	status	character varying	20	N	'draft'::character varying	N
+content_review	5	submitter_id	uuid		Y		N
+content_review	6	reviewer_id	uuid		Y		N
+content_review	7	reject_reason	text		Y		N
+content_review	8	submitted_at	timestamp with time zone		N	now()	N
+content_review	9	reviewed_at	timestamp with time zone		Y		N
+content_review	10	instance_id	uuid		Y		N
+content_review	11	content_version	integer		Y		N
+content_review	12	last_opinion	text		Y		N
+content_source	1	id	uuid		N	gen_random_uuid()	Y
+content_source	2	name	character varying	200	N		N
+content_source	3	publisher	character varying	200	Y		N
+content_source	4	publisher_short	character varying	100	Y		N
+content_source	5	document_title	character varying	300	Y		N
+content_source	6	url	character varying	500	Y		N
+content_source	7	source_type	character varying	32	N	'official'::character varying	N
+content_source	8	collect_method	character varying	64	Y		N
+content_source	9	remark	text		Y		N
+content_source	10	order_num	integer		N	0	N
+content_source	11	created_at	timestamp with time zone		N	now()	N
+content_source	12	updated_at	timestamp with time zone		N	now()	N
+content_source_link	1	id	uuid		N	gen_random_uuid()	Y
+content_source_link	2	target_type	character varying	32	N		N
+content_source_link	3	target_id	uuid		N		N
+content_source_link	4	source_id	uuid		N		N
+content_source_link	5	note	character varying	300	Y		N
+content_source_link	6	created_at	timestamp with time zone		N	now()	N
+discussion_post	1	id	uuid		N	gen_random_uuid()	N
+discussion_post	2	topic_id	uuid		N		N
+discussion_post	3	parent_id	uuid		Y		N
+discussion_post	4	author_id	uuid		N		N
+discussion_post	5	content	text		N		N
+discussion_post	6	images	jsonb		N	'[]'::jsonb	N
+discussion_post	7	lang	character varying	8	N	'zh'::character varying	N
+discussion_post	8	status	character varying	20	N	'published'::character varying	N
+discussion_post	9	floor_no	integer		N	1	N
+discussion_post	10	quote_post_id	uuid		Y		N
+discussion_post	11	like_count	integer		N	0	N
+discussion_post	12	reply_count	integer		N	0	N
+discussion_post	13	risk_level	character varying	16	N	'none'::character varying	N
+discussion_post	14	hit_words	character varying	200	Y		N
+discussion_post	15	created_at	timestamp with time zone		N	now()	N
+discussion_post	16	updated_at	timestamp with time zone		N	now()	N
+discussion_topic	1	id	uuid		N	gen_random_uuid()	N
+discussion_topic	2	board_id	uuid		N		N
+discussion_topic	3	author_id	uuid		N		N
+discussion_topic	4	title	character varying	200	N		N
+discussion_topic	5	content	text		N		N
+discussion_topic	6	images	jsonb		N	'[]'::jsonb	N
+discussion_topic	7	lang	character varying	8	N	'zh'::character varying	N
+discussion_topic	8	status	character varying	20	N	'published'::character varying	N
+discussion_topic	9	pinned	boolean		N	false	N
+discussion_topic	10	featured	boolean		N	false	N
+discussion_topic	11	locked	boolean		N	false	N
+discussion_topic	12	linked_type	character varying	20	Y		N
+discussion_topic	13	linked_id	uuid		Y		N
+discussion_topic	14	reply_count	integer		N	0	N
+discussion_topic	15	like_count	integer		N	0	N
+discussion_topic	16	favorite_count	integer		N	0	N
+discussion_topic	17	view_count	bigint		N	0	N
+discussion_topic	18	floor_count	integer		N	0	N
+discussion_topic	19	last_reply_at	timestamp with time zone		Y		N
+discussion_topic	20	last_reply_user_id	uuid		Y		N
+discussion_topic	21	risk_level	character varying	16	N	'none'::character varying	N
+discussion_topic	22	hit_words	character varying	200	Y		N
+discussion_topic	23	edited_at	timestamp with time zone		Y		N
+discussion_topic	24	edit_count	integer		N	0	N
+discussion_topic	25	created_at	timestamp with time zone		N	now()	N
+discussion_topic	26	updated_at	timestamp with time zone		N	now()	N
+ethnic_custom	1	id	uuid		N	gen_random_uuid()	N
+ethnic_custom	2	ethnic_group_id	uuid		N		N
+ethnic_custom	3	category	character varying	32	Y		N
+ethnic_custom	4	title	character varying	128	N		N
+ethnic_custom	5	content	text		Y		N
+ethnic_custom	6	image	text		Y		N
+ethnic_custom	7	order_num	integer		N	0	N
+ethnic_custom	8	created_at	timestamp with time zone		N	now()	N
+ethnic_custom	9	updated_at	timestamp with time zone		N	now()	N
+ethnic_group	1	id	uuid		N	gen_random_uuid()	N
+ethnic_group	2	slug	character varying	64	N		N
+ethnic_group	3	name	character varying	64	N		N
+ethnic_group	4	name_en	character varying	64	Y		N
+ethnic_group	5	self_name	character varying	64	Y		N
+ethnic_group	6	pinyin	character varying	128	Y		N
+ethnic_group	7	population	bigint		Y		N
+ethnic_group	8	language_family	character varying	64	Y		N
+ethnic_group	9	region	jsonb		N	'[]'::jsonb	N
+ethnic_group	10	languages	jsonb		N	'[]'::jsonb	N
+ethnic_group	11	scripts	jsonb		N	'[]'::jsonb	N
+ethnic_group	12	religion	jsonb		N	'[]'::jsonb	N
+ethnic_group	13	summary	text		Y		N
+ethnic_group	14	summary_en	text		Y		N
+ethnic_group	15	description	text		Y		N
+ethnic_group	16	description_en	text		Y		N
+ethnic_group	17	cover_image	text		Y		N
+ethnic_group	18	theme_color	character varying	7	Y		N
+ethnic_group	19	tags	jsonb		N	'[]'::jsonb	N
+ethnic_group	20	status	character varying	20	N	'draft'::character varying	N
+ethnic_group	21	order_num	integer		N	0	N
+ethnic_group	22	created_by	uuid		Y		N
+ethnic_group	23	updated_by	uuid		Y		N
+ethnic_group	24	created_at	timestamp with time zone		N	now()	N
+ethnic_group	25	updated_at	timestamp with time zone		N	now()	N
+ethnic_group	26	content_version	integer		N	0	N
+ethnic_location	1	id	uuid		N	gen_random_uuid()	N
+ethnic_location	2	ethnic_group_id	uuid		N		N
+ethnic_location	3	province	character varying	64	Y		N
+ethnic_location	4	city	character varying	64	Y		N
+ethnic_location	5	longitude	numeric		Y		N
+ethnic_location	6	latitude	numeric		Y		N
+ethnic_location	7	description	text		Y		N
+ethnic_location	8	order_num	integer		N	0	N
+favorite	1	id	uuid		N	gen_random_uuid()	N
+favorite	2	user_id	uuid		N		N
+favorite	3	entry_type	character varying	20	N		N
+favorite	4	entry_id	uuid		N		N
+favorite	5	created_at	timestamp with time zone		N	now()	N
+festival	1	id	uuid		N	gen_random_uuid()	N
+festival	2	slug	character varying	64	N		N
+festival	3	ethnic_group_id	uuid		Y		N
+festival	4	name	character varying	128	N		N
+festival	5	name_en	character varying	128	Y		N
+festival	6	type	character varying	20	N	'traditional'::character varying	N
+festival	7	solar_date	date		Y		N
+festival	8	lunar_date	character varying	64	Y		N
+festival	9	origin	text		Y		N
+festival	10	description	text		Y		N
+festival	11	customs	jsonb		N	'[]'::jsonb	N
+festival	12	images	jsonb		N	'[]'::jsonb	N
+festival	13	cover_image	text		Y		N
+festival	14	status	character varying	20	N	'draft'::character varying	N
+festival	15	order_num	integer		N	0	N
+festival	16	created_by	uuid		Y		N
+festival	17	updated_by	uuid		Y		N
+festival	18	created_at	timestamp with time zone		N	now()	N
+festival	19	updated_at	timestamp with time zone		N	now()	N
+festival	20	description_en	text		Y		N
+festival	21	description_en_source	character varying	32	Y		N
+festival	22	content_version	integer		N	0	N
+food	1	id	uuid		N	gen_random_uuid()	N
+food	2	ethnic_group_id	uuid		N		N
+food	3	name	character varying	128	N		N
+food	4	name_en	character varying	128	Y		N
+food	5	description	text		Y		N
+food	6	image	text		Y		N
+food	7	order_num	integer		N	0	N
+food	8	created_at	timestamp with time zone		N	now()	N
+food	9	updated_at	timestamp with time zone		N	now()	N
+food	10	origin	text		Y		N
+food	11	description_en	text		Y		N
+food	12	description_en_source	character varying	32	Y		N
+form_config	1	id	uuid		N	gen_random_uuid()	N
+form_config	2	code	character varying	64	N		N
+form_config	3	name	character varying	128	N		N
+form_config	4	description	text		Y		N
+form_config	5	schema	jsonb		N	'{}'::jsonb	N
+form_config	6	status	character varying	20	N	'active'::character varying	N
+form_config	7	created_by	uuid		Y		N
+form_config	8	updated_by	uuid		Y		N
+form_config	9	created_at	timestamp with time zone		N	now()	N
+form_config	10	updated_at	timestamp with time zone		N	now()	N
+image_credit	1	id	uuid		N	gen_random_uuid()	Y
+image_credit	2	image_path	character varying	300	N		N
+image_credit	3	target_type	character varying	32	Y		N
+image_credit	4	target_id	uuid		Y		N
+image_credit	5	caption	character varying	200	Y		N
+image_credit	6	credit_status	character varying	32	N	'unverified'::character varying	N
+image_credit	7	author	character varying	200	Y		N
+image_credit	8	license	character varying	100	Y		N
+image_credit	9	license_url	character varying	300	Y		N
+image_credit	10	source_url	character varying	500	Y		N
+image_credit	11	source_site	character varying	100	Y		N
+image_credit	12	attribution_required	boolean		N	true	N
+image_credit	13	remark	text		Y		N
+image_credit	14	created_at	timestamp with time zone		N	now()	N
+image_credit	15	updated_at	timestamp with time zone		N	now()	N
+interest_tag	1	id	uuid		N	gen_random_uuid()	Y
+interest_tag	2	dimension	character varying	32	N		N
+interest_tag	3	name	character varying	64	N		N
+interest_tag	4	name_en	character varying	128	Y		N
+interest_tag	5	description	character varying	300	Y		N
+interest_tag	6	color	character varying	32	Y		N
+interest_tag	7	enabled	boolean		N	true	N
+interest_tag	8	order_num	integer		N	0	N
+interest_tag	9	created_at	timestamp with time zone		N	now()	N
+interest_tag	10	updated_at	timestamp with time zone		N	now()	N
+like_record	1	id	uuid		N	gen_random_uuid()	N
+like_record	2	user_id	uuid		N		N
+like_record	3	entry_type	character varying	20	N		N
+like_record	4	entry_id	uuid		N		N
+like_record	5	created_at	timestamp with time zone		N	now()	N
+notification	1	id	uuid		N	gen_random_uuid()	N
+notification	2	user_id	uuid		N		N
+notification	3	type	character varying	32	N		N
+notification	4	actor_id	uuid		Y		N
+notification	5	target_type	character varying	32	Y		N
+notification	6	target_id	uuid		Y		N
+notification	7	title	character varying	200	Y		N
+notification	8	content	character varying	500	Y		N
+notification	9	payload	jsonb		N	'{}'::jsonb	N
+notification	10	read_at	timestamp with time zone		Y		N
+notification	11	emailed	boolean		N	false	N
+notification	12	created_at	timestamp with time zone		N	now()	N
+permission	1	id	uuid		N	gen_random_uuid()	N
+permission	2	code	character varying	64	N		N
+permission	3	name	character varying	64	N		N
+permission	4	description	text		Y		N
+permission	5	created_at	timestamp with time zone		N	now()	N
+permission	6	updated_at	timestamp with time zone		N	now()	N
+person_profile	1	id	uuid		N	gen_random_uuid()	Y
+person_profile	2	person_name	character varying	128	N		N
+person_profile	3	ethnic_group_name	character varying	64	Y		N
+person_profile	4	role_type	character varying	32	N	'inheritor'::character varying	N
+person_profile	5	domain	character varying	64	Y		N
+person_profile	6	bio	text		Y		N
+person_profile	7	lifespan	character varying	64	Y		N
+person_profile	8	created_at	timestamp with time zone		N	now()	N
+person_profile	9	updated_at	timestamp with time zone		N	now()	N
+role	1	id	uuid		N	gen_random_uuid()	N
+role	2	code	character varying	64	N		N
+role	3	name	character varying	64	N		N
+role	4	description	text		Y		N
+role	5	created_at	timestamp with time zone		N	now()	N
+role	6	updated_at	timestamp with time zone		N	now()	N
+role_permission	1	role_id	uuid		N		N
+role_permission	2	permission_id	uuid		N		N
+search_document	1	id	uuid		N	gen_random_uuid()	Y
+search_document	2	doc_type	character varying	32	N		N
+search_document	3	doc_id	uuid		N		N
+search_document	4	url	character varying	300	N		N
+search_document	5	title	character varying	300	N		N
+search_document	6	summary	text		Y		N
+search_document	7	body	text		Y		N
+search_document	8	ethnic_name	character varying	64	Y		N
+search_document	9	cover_image	character varying	300	Y		N
+search_document	10	theme_color	character varying	32	Y		N
+search_document	11	region	character varying	120	Y		N
+search_document	12	category	character varying	64	Y		N
+search_document	13	pinyin_full	character varying	300	Y		N
+search_document	14	pinyin_abbr	character varying	64	Y		N
+search_document	15	title_en	character varying	300	Y		N
+search_document	16	body_en	text		Y		N
+search_document	17	popularity	integer		N	0	N
+search_document	18	content_at	timestamp with time zone		Y		N
+search_document	19	updated_at	timestamp with time zone		N	now()	N
+topic	1	id	uuid		N	gen_random_uuid()	N
+topic	2	slug	character varying	64	N		N
+topic	3	title	character varying	128	N		N
+topic	4	subtitle	character varying	255	Y		N
+topic	5	description	text		Y		N
+topic	6	cover_image	text		Y		N
+topic	7	status	character varying	20	N	'draft'::character varying	N
+topic	8	order_num	integer		N	0	N
+topic	9	created_by	uuid		Y		N
+topic	10	updated_by	uuid		Y		N
+topic	11	created_at	timestamp with time zone		N	now()	N
+topic	12	updated_at	timestamp with time zone		N	now()	N
+topic	13	content_version	integer		N	0	N
+topic_entry	1	id	uuid		N	gen_random_uuid()	N
+topic_entry	2	topic_id	uuid		N		N
+topic_entry	3	entry_type	character varying	20	N		N
+topic_entry	4	entry_id	uuid		N		N
+topic_entry	5	sort_order	integer		N	0	N
+traditional_sport	1	id	uuid		N	gen_random_uuid()	Y
+traditional_sport	2	name	character varying	128	N		N
+traditional_sport	3	category	character varying	32	N		N
+traditional_sport	4	ethnic_origins	jsonb		N	'[]'::jsonb	N
+traditional_sport	5	description	text		Y		N
+traditional_sport	6	equipment	character varying	256	Y		N
+traditional_sport	7	venue	character varying	256	Y		N
+traditional_sport	8	team_size	character varying	128	Y		N
+traditional_sport	9	first_event_year	integer		Y		N
+traditional_sport	10	sub_events	jsonb		N	'[]'::jsonb	N
+traditional_sport	11	heritage_link	character varying	128	Y		N
+traditional_sport	12	created_at	timestamp with time zone		N	now()	N
+traditional_sport	13	updated_at	timestamp with time zone		N	now()	N
+translate_glossary	1	id	uuid		N	gen_random_uuid()	Y
+translate_glossary	2	source_locale	character varying	8	N	'zh'::character varying	N
+translate_glossary	3	target_locale	character varying	8	N	'en'::character varying	N
+translate_glossary	4	term	character varying	128	N		N
+translate_glossary	5	translation	character varying	256	N		N
+translate_glossary	6	enabled	boolean		N	true	N
+translate_glossary	7	remark	character varying	200	Y		N
+translate_glossary	8	created_at	timestamp with time zone		N	now()	N
+translate_glossary	9	updated_at	timestamp with time zone		N	now()	N
+user_account	1	id	uuid		N	gen_random_uuid()	N
+user_account	2	account	character varying	64	N		N
+user_account	3	password_hash	character varying	128	N		N
+user_account	4	nickname	character varying	64	Y		N
+user_account	5	avatar	text		Y		N
+user_account	6	mobile	character varying	20	Y		N
+user_account	7	email	character varying	128	Y		N
+user_account	8	status	character varying	20	N	'active'::character varying	N
+user_account	9	created_at	timestamp with time zone		N	now()	N
+user_account	10	updated_at	timestamp with time zone		N	now()	N
+user_account	11	lang	character varying	8	N	'zh'::character varying	N
+user_account	12	security_question	character varying	255	Y		N
+user_account	13	security_answer	character varying	255	Y		N
+user_account	14	bio	character varying	200	Y		N
+user_account	15	locale	character varying	8	Y		N
+user_account	16	timezone	character varying	64	Y		N
+user_account	17	website	character varying	200	Y		N
+user_account	18	last_active_at	timestamp with time zone		Y		N
+user_account	19	muted_until	timestamp with time zone		Y		N
+user_account	20	banned_until	timestamp with time zone		Y		N
+user_account	21	trust_level	integer		N	0	N
+user_account	22	allow_stranger_message	boolean		N	false	N
+user_behavior	1	id	uuid		N	gen_random_uuid()	Y
+user_behavior	2	user_id	uuid		N		N
+user_behavior	3	action	character varying	32	N		N
+user_behavior	4	target_type	character varying	32	Y		N
+user_behavior	5	target_id	uuid		Y		N
+user_behavior	6	keyword	character varying	200	Y		N
+user_behavior	7	weight	integer		N	1	N
+user_behavior	8	created_at	timestamp with time zone		N	now()	N
+user_interest	1	id	uuid		N	gen_random_uuid()	Y
+user_interest	2	user_id	uuid		N		N
+user_interest	3	tag_id	uuid		N		N
+user_interest	4	weight	integer		N	1	N
+user_interest	5	created_at	timestamp with time zone		N	now()	N
+user_role	1	user_id	uuid		N		N
+user_role	2	role_id	uuid		N		N
+workflow_instance	1	id	uuid		N	gen_random_uuid()	Y
+workflow_instance	2	entry_type	character varying	32	N		N
+workflow_instance	3	entry_id	uuid		N		N
+workflow_instance	4	entry_title	character varying	200	Y		N
+workflow_instance	5	content_version	integer		N	1	N
+workflow_instance	6	process_definition_id	character varying	255	Y		N
+workflow_instance	7	process_definition_version	integer		Y		N
+workflow_instance	8	process_instance_key	character varying	64	Y		N
+workflow_instance	9	business_key	character varying	120	Y		N
+workflow_instance	10	status	character varying	20	N	'running'::character varying	N
+workflow_instance	11	current_stage	character varying	32	N	'pending_review'::character varying	N
+workflow_instance	12	submitter_id	uuid		Y		N
+workflow_instance	13	submitter_name	character varying	64	Y		N
+workflow_instance	14	current_assignee_id	uuid		Y		N
+workflow_instance	15	current_task_key	character varying	64	Y		N
+workflow_instance	16	current_task_name	character varying	200	Y		N
+workflow_instance	17	round_no	integer		N	1	N
+workflow_instance	18	started_at	timestamp with time zone		N	now()	N
+workflow_instance	19	finished_at	timestamp with time zone		Y		N
+workflow_instance	20	created_at	timestamp with time zone		N	now()	N
+workflow_instance	21	updated_at	timestamp with time zone		N	now()	N
+workflow_opinion	1	id	uuid		N	gen_random_uuid()	Y
+workflow_opinion	2	instance_id	uuid		N		N
+workflow_opinion	3	entry_type	character varying	32	N		N
+workflow_opinion	4	entry_id	uuid		N		N
+workflow_opinion	5	content_version	integer		N	1	N
+workflow_opinion	6	stage	character varying	32	N		N
+workflow_opinion	7	decision	character varying	32	Y		N
+workflow_opinion	8	opinion	text		Y		N
+workflow_opinion	9	operator_id	uuid		Y		N
+workflow_opinion	10	operator_name	character varying	64	Y		N
+workflow_opinion	11	operator_role	character varying	32	Y		N
+workflow_opinion	12	camunda_task_key	character varying	64	Y		N
+workflow_opinion	13	task_name	character varying	200	Y		N
+workflow_opinion	14	created_at	timestamp with time zone		N	now()	N

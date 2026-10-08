@@ -150,7 +150,19 @@ const messages: Record<Lang, Record<string, string>> = {
 };
 
 export const useLangStore = defineStore("lang", () => {
-	const lang = ref<Lang>((localStorage.getItem(STORAGE_KEY) as Lang) || "zh");
+	/**
+	 * 读取持久化语言。
+	 *
+	 * SSR / 预渲染阶段没有 localStorage，必须先判环境再取值，
+	 * 否则 store 一被实例化就抛 ReferenceError。
+	 * 服务端固定回退到 "zh"：预渲染产物只有中文一份，
+	 * 英文界面由用户切换后走纯客户端渲染。
+	 */
+	const lang = ref<Lang>(
+		(typeof localStorage !== "undefined"
+			? (localStorage.getItem(STORAGE_KEY) as Lang)
+			: null) || "zh",
+	);
 
 	const isEn = computed(() => lang.value === "en");
 
@@ -170,8 +182,12 @@ export const useLangStore = defineStore("lang", () => {
 
 	function apply(l: Lang, persistToServer: boolean) {
 		lang.value = l;
-		localStorage.setItem(STORAGE_KEY, l);
-		document.documentElement.lang = l === "en" ? "en" : "zh-CN";
+		if (typeof localStorage !== "undefined") {
+			localStorage.setItem(STORAGE_KEY, l);
+		}
+		if (typeof document !== "undefined") {
+			document.documentElement.lang = l === "en" ? "en" : "zh-CN";
+		}
 		// 登录后同步到用户表（需求：i18n 偏好随用户持久化，换设备登录自动恢复）
 		if (persistToServer) {
 			const auth = useAuthStore();

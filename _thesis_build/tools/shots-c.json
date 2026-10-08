@@ -1,0 +1,20 @@
+{
+ "port": 9222,
+ "reportPath": "C:\\codeDev\\56\\app\\_shots\\report-c.json",
+ "shots": [
+  { "url": "http://localhost:5173/#/", "out": "C:\\codeDev\\56\\app\\_shots\\c-01-home.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/ethnic", "out": "C:\\codeDev\\56\\app\\_shots\\c-02-ethnic-list.png", "width": 1440, "height": 900, "waitMs": 4000, "evalWait": "document.body.innerText.includes('族')" },
+  { "url": "http://localhost:5173/#/ethnic/00000000-0000-0000-0000-000000000008", "out": "C:\\codeDev\\56\\app\\_shots\\c-03-ethnic-detail.png", "width": 1440, "height": 900, "waitMs": 4500, "evalWait": "document.body.innerText.includes('壮族')" },
+  { "url": "http://localhost:5173/#/festival", "out": "C:\\codeDev\\56\\app\\_shots\\c-04-festival.png", "width": 1440, "height": 900, "waitMs": 4000 },
+  { "url": "http://localhost:5173/#/festival/calendar", "out": "C:\\codeDev\\56\\app\\_shots\\c-05-calendar.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/heritage", "out": "C:\\codeDev\\56\\app\\_shots\\c-06-heritage.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/persons", "out": "C:\\codeDev\\56\\app\\_shots\\c-07-persons.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/autonomous", "out": "C:\\codeDev\\56\\app\\_shots\\c-08-autonomous.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/sports", "out": "C:\\codeDev\\56\\app\\_shots\\c-09-sports.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/search?q=%E8%92%99%E5%8F%A4", "out": "C:\\codeDev\\56\\app\\_shots\\c-10-search.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5173/#/interests", "out": "C:\\codeDev\\56\\app\\_shots\\c-11-interests.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/ethnic/languages", "out": "C:\\codeDev\\56\\app\\_shots\\c-12-languages.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/discussion", "out": "C:\\codeDev\\56\\app\\_shots\\c-13-discussion.png", "width": 1440, "height": 900, "waitMs": 4500 },
+  { "url": "http://localhost:5173/#/unity", "out": "C:\\codeDev\\56\\app\\_shots\\c-14-unity.png", "width": 1440, "height": 900, "waitMs": 4500 }
+ ]
+}

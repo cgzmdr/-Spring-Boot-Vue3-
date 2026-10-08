@@ -1,0 +1,31 @@
+{
+ "shots": [
+  {
+   "url": "http://localhost:5273/#/login",
+   "out": "C:\\codeDev\\56\\app\\_shots\\dbg-login.png",
+   "bytes": 77739,
+   "title": "仪表盘 · 56民族OA",
+   "textLen": 209,
+   "textHead": "56 民族 OA 工作台 数据概览 我的待办 内容运营 社区治理 流程建模 系统设置 首页 超 超级管理员 5 用户总数 56 民族总数 192 节日总数 165 艺术总数 6 专题总数 0 待审核 内容维度统计 用户反馈 共 1 条 称呼 联系方式 类型 满意度 反馈内容 访问日期 提交时间 cz - 问题反馈 不满意 有问题 2026-08-27 2026-08-27 13:11:48 1 5条/页 共 1 条",
+   "scrollW": 1440,
+   "scrollH": 900,
+   "imgs": 1,
+   "imgsLoaded": 1,
+   "probes": {
+    "inputs": [
+     {
+      "type": "text",
+      "val": "",
+      "ph": ""
+     }
+    ],
+    "storage": {
+     "satoken": "a5ea0255-477d-46f1-a91f-336ce9d61f1d"
+    },
+    "hash": "#/dashboard",
+    "msgs": []
+   }
+  }
+ ],
+ "failures": []
+}

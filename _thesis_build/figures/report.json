@@ -1,0 +1,137 @@
+{
+ "shots": [
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig3-1-usecase-user.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig3-1-usecase-user.png",
+   "bytes": 114069,
+   "title": "",
+   "textLen": 174,
+   "textHead": "走进多彩 56 个民族世界（前台门户） 普通用户 浏览首页与专题 检索民族 / 节日 / 艺术内容 查看民族详情 （风俗 · 节日 · 艺术 · 美食 · 聚居地） 查看非遗名录与人物专栏 查看民族自治地方与传统体育 使用节日日历（农历换算） 收藏 / 点赞 / 分享内容 选择兴趣标签并获得推荐 注册与登录 / 维护个人资料 参与讨论区发帖与私信",
+   "scrollW": 1160,
+   "scrollH": 625,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig3-2-usecase-admin.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig3-2-usecase-admin.png",
+   "bytes": 127401,
+   "title": "",
+   "textLen": 190,
+   "textHead": "56 民族 OA 中后台管理系统 管理员 登录后台并查看工作台统计 民族内容维护（新增 / 编辑 / 删除 / 发布） 节日 / 艺术 / 美食 / 风俗内容维护 专题与人物档案维护 民族自治地方与传统体育维护 内容审批：提交、审核、修改、下线 BPMN 流程建模与部署 用户与角色权限管理（RBAC） 讨论区治理与内容审核 检索索引重建与兴趣标签维护 翻译词表维护与图片署名核实",
+   "scrollW": 1160,
+   "scrollH": 665,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-1-arch.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-1-arch.png",
+   "bytes": 82584,
+   "title": "",
+   "textLen": 479,
+   "textHead": "系统总体架构 客户端 / 展示层 C 端门户（Vue 3 + TS + Vite） Element Plus · Pinia · Vue Router 中后台（Vue 3 + Element Plus） ECharts · bpmn-js · form-js 移动端（React Native / Expo，可选） 接口 / 安全层 RESTful API（Spring MVC / Spring Boot 4） Sa-Token 统一鉴权 · RBAC 权限点 · CORS 白名单 限流与参数校验 · 统一异常与响应封装 业务服务层 民族 / 节日 / 艺术 / 美食 / 风俗 内容服务 专题 · 人物档案 · 自治地方 · 传统体育 检索与推荐服务 （索引 / 拼音 / 兴趣标签） 讨论区 · 通知 · 私信 · 互动 翻译服务 （词表 + AI 兜底） 内容审批工作流服务 数据与引擎层 ",
+   "scrollW": 1120,
+   "scrollH": 705,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-2-func-tree.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-2-func-tree.png",
+   "bytes": 100837,
+   "title": "",
+   "textLen": 365,
+   "textHead": "走进多彩 56 个民族世界 门户浏览与检索 首页与专题聚合 民族频道与详情 节日频道与日历 传统艺术 / 非遗名录 美食 / 风俗 / 民族语文 全文检索（拼音 / 首字母） 文化资料专栏 人物专栏（传承人 / 名家） 民族自治地方 民族传统体育 民族服饰 / 民居建筑 人口图谱与分布地图 兴趣与个性化推荐 互动与个人中心 注册登录 / 个人资料 收藏 / 点赞 / 分享 讨论区发帖与回复 私信 / 通知 / 关注 我的社区与举报 中英文切换 内容运营后台 民族 / 节日 / 艺术维护 人物 / 自治地方 / 体育维护 专题与表单配置 检索索引与兴趣标签 翻译词表与图片署名 内容来源维护 治理与系统管理 内容审批工作流待办 BPMN 流程建模与部署 用户 / 角色权限管理 讨论区治理与审核 统计看板与反馈 上传与文件管理",
+   "scrollW": 1180,
+   "scrollH": 765,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-3-dev-flow.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-3-dev-flow.png",
+   "bytes": 69550,
+   "title": "",
+   "textLen": 239,
+   "textHead": "开始 需求调研与分析 （民族文化资料整理、用户角色与功能边界） 系统总体设计 （架构选型、功能结构设计、数据库设计） 开发环境搭建 （JDK 21 / PostgreSQL / Redis / Node.js 与 pnpm） 数据库建表与内容数据初始化 后端接口开发 （内容服务、检索、推荐、审批工作流） 前端页面开发 （C 端门户与中后台管理系统） 前后端联调与缺陷修复 功能与性能是否达标？ 部署上线、编写使用与维护文档 结束 是 定位缺陷，修改代码并回归测试 否 返回修复",
+   "scrollW": 940,
+   "scrollH": 965,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-4-login-flow.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-4-login-flow.png",
+   "bytes": 56252,
+   "title": "",
+   "textLen": 157,
+   "textHead": "开始 打开登录页面，输入账号与密码 表单校验是否通过？ 提交登录请求（Sa-Token 统一鉴权） 账号与密码是否正确？ 签发 token，写入本地存储，加载用户信息与权限点 按角色跳转对应首页 （前台门户 / 中后台工作台） 结束 是 是 提示必填项缺失，返回表单 否 返回输入 提示账号或密码错误 否 返回输入",
+   "scrollW": 940,
+   "scrollH": 757,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-5-operate-flow.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-5-operate-flow.png",
+   "bytes": 63382,
+   "title": "",
+   "textLen": 165,
+   "textHead": "开始 用户访问系统，加载首页与全局导航 用户是否已登录？ 进入内容频道，提交筛选或检索条件 后端按条件查询数据并返回结果集 前端渲染列表，用户进入详情页阅读 是否需要互动？ （收藏 / 点赞 / 评论 / 分享） 校验登录状态，写入互动记录并更新计数 结束 是 是 以游客身份浏览公开内容 否 继续浏览 仅浏览，不产生互动记录 否",
+   "scrollW": 940,
+   "scrollH": 839,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-6-add-flow.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-6-add-flow.png",
+   "bytes": 47679,
+   "title": "",
+   "textLen": 130,
+   "textHead": "开始 管理员在后台选择内容类型，点击「新增」 填写表单（名称、所属民族、分类、正文、图片等） 必填项与数据格式是否合法？ 提交保存，写入对应业务数据表 同步更新检索索引与统计口径 返回列表页并提示「添加成功」 结束 是 提示具体校验错误，返回表单 否 返回修改",
+   "scrollW": 940,
+   "scrollH": 719,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-7-update-flow.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-7-update-flow.png",
+   "bytes": 58813,
+   "title": "",
+   "textLen": 144,
+   "textHead": "开始 在列表中选中记录，点击「编辑」 按主键读取记录并回填表单 修改字段内容并提交保存 修改后的数据是否合法？ 按主键执行更新，记录内容版本与操作日志 该内容是否已发布？ 提交内容审批流程，审批通过后重新发布 结束 是 是 提示错误信息，返回修改 否 返回修改 直接保存生效，无需审批 否",
+   "scrollW": 940,
+   "scrollH": 839,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-8-delete-flow.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-8-delete-flow.png",
+   "bytes": 59567,
+   "title": "",
+   "textLen": 141,
+   "textHead": "开始 在列表中选中记录，点击「删除」 前端弹出二次确认对话框 是否确认删除？ 后端校验操作权限与关联数据（收藏 / 引用） 是否存在禁止删除的关联？ 按主键删除记录，清理检索索引与关联表 刷新列表并提示「删除成功」 结束 是 否 取消本次删除操作 否 提示存在关联内容，禁止删除 是",
+   "scrollW": 940,
+   "scrollH": 839,
+   "imgs": 0,
+   "imgsLoaded": 0
+  },
+  {
+   "url": "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-9-er.html",
+   "out": "C:\\codeDev\\56\\app\\_figs\\fig4-9-er.png",
+   "bytes": 114619,
+   "title": "",
+   "textLen": 1124,
+   "textHead": "ethnic_group（民族） PK id name 名称 / pinyin 拼音 population 人口 language_family 语系 region 聚居地 / description food（美食） PK id ethnic_group_id FK name / description cooking_method ethnic_custom（风俗） PK id ethnic_group_id FK custom_type / content festival（节日） PK id ethnic_group_id FK type 类型 solar_date / lunar_date origin / customs art（传统艺术 / 非遗） PK id ethnic_group_id FK category 类别 heritage_level 级别 inheritor",
+   "scrollW": 1180,
+   "scrollH": 785,
+   "imgs": 0,
+   "imgsLoaded": 0
+  }
+ ],
+ "failures": []
+}

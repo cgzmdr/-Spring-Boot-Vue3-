@@ -1,5 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect, watch, onUnmounted } from "vue";
+import {
+	ref,
+	computed,
+	watchEffect,
+	watch,
+	onMounted,
+	onUnmounted,
+	defineAsyncComponent,
+	shallowRef,
+	nextTick,
+} from "vue";
+import type { Ref } from "vue";
 import { ArrowRight } from "@element-plus/icons-vue";
 import { useRoute, useRouter } from "vue-router";
 import { useWindowScroll, useElementSize } from "@vueuse/core";
@@ -7,14 +18,37 @@ import { useLangStore } from "@/stores/lang";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
 import { resolveStaticUrl } from "@/utils/format";
-import LoginDialog from "./LoginDialog.vue";
+
+/**
+ * 首屏按需加载（Element Plus 瘦身）
+ *
+ * 报头是每个页面的首屏组件，但它身上挂着好几个「只有用户点了才会出现」的
+ * Element Plus 组件：
+ *   · 登录弹窗 —— el-dialog / el-form / el-form-item / el-input / el-button
+ *   · 移动端菜单抽屉 —— el-drawer（内含 overlay / focus-trap / 滚动锁）
+ *
+ * 这些组件的样式与逻辑此前会随入口一起下载解析，纯属浪费：
+ * 3G 用户还没看到页面，就先为一个可能永远不会打开的弹窗付了流量。
+ * 改为 async 组件后，它们被拆成独立 chunk，只在真正需要时才拉取。
+ *
+ * 注意：`defineAsyncComponent` 的加载器必须写成动态 import，
+ * 否则打包器仍会把它并入首屏 chunk，优化失效。
+ */
+const LoginDialog = defineAsyncComponent(() => import("./LoginDialog.vue"));
+const MobileNavDrawer = defineAsyncComponent(() => import("./MobileNavDrawer.vue"));
 
 const route = useRoute();
 const router = useRouter();
 const lang = useLangStore();
 const auth = useAuthStore();
 
-const loginDialog = ref<InstanceType<typeof LoginDialog> | null>(null);
+/** 是否已经/需要渲染异步组件：挂载后再置位，避免异步 chunk 拖慢首屏 */
+const loginDialogMounted = ref(false);
+const drawerMounted = ref(false);
+
+const loginDialog = shallowRef<{
+	open: () => void;
+} | null>(null);
 const drawerOpen = ref(false);
 
 const mastEl = ref<HTMLElement | null>(null);
@@ -30,7 +64,21 @@ const burgerEl = ref<HTMLElement | null>(null);
 const ENTER_AT = 110;
 const EXIT_AT = 50;
 const compact = ref(false);
-const { y: scrollY } = useWindowScroll();
+
+/**
+ * 是否处于浏览器环境。
+ *
+ * 报头依赖 useWindowScroll / useElementSize 等 @vueuse/core 组合式函数，
+ * 它们在**调用时**就会访问 window / IntersectionObserver，
+ * 在 Node（SSR / 预渲染）里直接抛 `window is not defined`。
+ * 因此服务端一律退化为静态值：报头以「展开态」直出，
+ * 客户端接管后再挂上真实监听。
+ */
+const isBrowser = typeof window !== "undefined";
+
+const scrollY = isBrowser
+	? useWindowScroll().y
+	: ref(0);
 
 /**
  * 报头为固定定位（脱离文档流），正文用 body 的 padding-top 避让。
@@ -42,13 +90,25 @@ const { y: scrollY } = useWindowScroll();
  * 注：报头若新增区块，需同步在此追加量测。
  */
 const BORDER_BOX = { box: "border-box" } as const;
-const { height: mastHeight } = useElementSize(mastEl, { width: 0, height: 0 }, BORDER_BOX);
-const { height: topHeight } = useElementSize(topBarEl, { width: 0, height: 0 }, BORDER_BOX);
-const { height: titleHeight } = useElementSize(titleInnerEl, { width: 0, height: 0 }, BORDER_BOX);
-const { height: navHeight } = useElementSize(navEl, { width: 0, height: 0 }, BORDER_BOX);
-const { height: burgerHeight } = useElementSize(burgerEl, { width: 0, height: 0 }, BORDER_BOX);
+/**
+ * 量测辅助：服务端没有布局，直接返回常量 0 的 ref。
+ * 用同一个工厂保证调用顺序稳定（组合式函数不能在条件分支里跳过，
+ * 否则客户端 hydration 时的 hook 顺序会与服务端不一致）。
+ */
+function useSize(el: Ref<HTMLElement | null>) {
+	return isBrowser
+		? useElementSize(el, { width: 0, height: 0 }, BORDER_BOX).height
+		: ref(0);
+}
+
+const mastHeight = useSize(mastEl);
+const topHeight = useSize(topBarEl);
+const titleHeight = useSize(titleInnerEl);
+const navHeight = useSize(navEl);
+const burgerHeight = useSize(burgerEl);
 
 watchEffect(() => {
+	if (!isBrowser) return;
 	const root = document.documentElement;
 	// 当前实际高度：供吸顶 Tab / 侧栏偏移使用
 	const current = Math.round(mastHeight.value);
@@ -195,10 +255,6 @@ function hoverClose() {
 	}, 160);
 }
 
-function toggleGroup(key: string) {
-	openGroup.value = openGroup.value === key ? null : key;
-}
-
 /** 路由变化时收起下拉 */
 watch(
 	() => route.fullPath,
@@ -215,8 +271,40 @@ function goSearch() {
 	router.push("/search");
 }
 
+/**
+ * 打开登录弹窗。
+ *
+ * 弹窗是异步组件，首次调用时它还没挂载、chunk 也还没下载，
+ * 因此不能简单 `await nextTick()` 后调 open()——那时 ref 仍是 null，
+ * 表现就是「点了登录没反应」（这正是本组件引入过的真实缺陷）。
+ *
+ * 正确做法：把「打开」意图记在 pendingOpen 上，等组件真正挂载
+ * （@vue:mounted / onMounted 后再 nextTick）再消费它。
+ */
+const pendingLoginOpen = ref(false);
+
 function openLogin() {
+	if (!loginDialogMounted.value) {
+		// 触发挂载：浏览器开始拉取 chunk，弹窗渲染完成后由 onLoginDialogReady 接手
+		pendingLoginOpen.value = true;
+		loginDialogMounted.value = true;
+		return;
+	}
 	loginDialog.value?.open();
+}
+
+/** 异步弹窗挂载完成：消费挂起的打开意图 */
+async function onLoginDialogReady() {
+	if (!pendingLoginOpen.value) return;
+	pendingLoginOpen.value = false;
+	await nextTick();
+	loginDialog.value?.open();
+}
+
+/** 打开移动端菜单抽屉（同样按需挂载） */
+function openDrawer() {
+	drawerMounted.value = true;
+	drawerOpen.value = true;
 }
 
 const userInitial = computed(() =>
@@ -235,6 +323,19 @@ watch(
 	{ immediate: true },
 );
 onUnmounted(() => notice.stopPolling());
+
+/**
+ * 全局「需要登录」事件（由 api/request.ts 在未登录/登录失效时派发）。
+ *
+ * 注意：这段监听原先在 LoginDialog 内部。弹窗改成按需加载后，
+ * 组件未挂载时就没人接这个事件——必须先由报头（始终存在）兜住，
+ * 再按需把弹窗拉起来，否则未登录用户触发受限操作时会「毫无反应」。
+ */
+function onAuthRequired() {
+	openLogin();
+}
+onMounted(() => window.addEventListener("auth:required", onAuthRequired));
+onUnmounted(() => window.removeEventListener("auth:required", onAuthRequired));
 </script>
 
 <template>
@@ -410,7 +511,7 @@ onUnmounted(() => notice.stopPolling());
 			<div
 				ref="burgerEl"
 				class="mast-burger"
-				@click="drawerOpen = true"
+				@click="openDrawer"
 			>
 				<svg
 					width="20"
@@ -437,56 +538,28 @@ onUnmounted(() => notice.stopPolling());
 		/>
 	</nav>
 
-	<el-drawer
+	<!--
+		移动端导航抽屉：按需加载。
+		仅在窄视口点击「菜单」时才挂载并拉取 chunk（el-drawer 及配套逻辑），
+		桌面端用户全程不会下载它。
+	-->
+	<MobileNavDrawer
+		v-if="drawerMounted"
 		v-model="drawerOpen"
-		direction="rtl"
-		size="260px"
-		:with-header="false"
-	>
-		<div class="mobile-nav">
-		<template
-			v-for="g in navGroups"
-			:key="g.key"
-		>
-			<!-- 一级：无下级则直接跳转；有下级则可展开 -->
-			<router-link
-				v-if="!g.children?.length"
-				:to="g.to"
-				:class="{ active: groupActive(g) }"
-				@click="drawerOpen = false"
-			>
-				{{ g.label }}
-			</router-link>
-			<template v-else>
-				<button
-					class="mn-group"
-					:class="{ active: groupActive(g), open: openGroup === g.key }"
-					@click="toggleGroup(g.key)"
-				>
-					<span>{{ g.label }}</span>
-					<span class="mn-caret">{{ openGroup === g.key ? "−" : "+" }}</span>
-				</button>
-				<div
-					v-if="openGroup === g.key"
-					class="mn-children"
-				>
-					<router-link
-						v-for="c in g.children"
-						:key="c.to"
-						:to="c.to"
-						:class="{ active: childActive(c) }"
-						@click="drawerOpen = false"
-					>
-						{{ c.label }}
-					</router-link>
-				</div>
-			</template>
-		</template>
-		<a @click="goSearch">{{ lang.t("search") }}</a>
-	</div>
-	</el-drawer>
+		:groups="navGroups"
+		:current-path="route.path"
+	/>
 
-	<LoginDialog ref="loginDialog" />
+	<!--
+		登录弹窗：按需加载。
+		由「登录」、「注册」或 auth:required 事件触发；
+		弹窗挂载完成后通过 @vue:mounted 通知父组件消费挂起的打开意图。
+	-->
+	<LoginDialog
+		v-if="loginDialogMounted"
+		ref="loginDialog"
+		@vue:mounted="onLoginDialogReady"
+	/>
 </template>
 
 <style scoped>

@@ -1,36 +1,27 @@
 package com.czdr.work.config;
 
+import com.czdr.work.comment.advisor.AuditLogAdvisor;
+import com.czdr.work.comment.advisor.BudgetAdvisor;
+import com.czdr.work.comment.advisor.InputGuardAdvisor;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springaicommunity.agent.tools.SkillsTool;
+import org.springframework.ai.chat.model.ChatModel;
 
 /**
- * AI 能力统一装配处：所有 Spring AI 的 ChatClient 都在这里定义（模型 / base-url / key 见
- * {@code spring.ai.openai.*}），业务侧只注入需要的 ChatClient，不各自 new 客户端。
+ * AI 能力统一装配处。
  *
- * <p>当前有两个用途：</p>
- * <ul>
- *   <li>{@link #chatClient}：通用对话人格（站内助手「小夏」），供后续智能讲解 / 问答使用；</li>
- *   <li>{@link #translateChatClient}：机器翻译专用（系统提示词固定为「只输出译文」，
- *       并在译文末尾附一段术语表供词表实时沉淀），由 {@code SpringAiTranslateProvider} 使用，
- *       见 {@code app.translate.provider=spring-ai}。</li>
- * </ul>
- *
+ * <p>所有 ChatClient 都在这里定义，并统一挂载 Harness 管控链
+ * （输入防护 / 预算控制 / 审计日志）；通用客户端额外挂载 Skills 工具。</p>
  * @author cz
  */
 @Configuration
 public class AiConfig {
 
-    /** 译文与术语表的分隔标记：之前的都是译文，之后的每行是「原文术语=译法」 */
     public static final String TERMS_MARKER = "---TERMS---";
 
-    /**
-     * 翻译专用系统提示词：只输出译文，并要求在末尾附一段「术语表」，
-     * 供 {@code GlossaryService#learnTerms} 实时沉淀进站点词表（词表越用越准）。
-     * 关掉自动沉淀只需设 {@code app.translate.auto-glossary-enabled=false}，提示词无需改动。
-     */
     public static final String TRANSLATE_SYSTEM_PROMPT_TEMPLATE = """
             你是「走进多彩 56 个民族世界」站点的专业翻译。
             把用户给出的文本翻译成其指定的目标语言。
@@ -53,26 +44,56 @@ public class AiConfig {
         this.properties = properties;
     }
 
-    /** 通用对话客户端（默认人格，供后续 AI 功能复用）；按类型注入 ChatClient 时默认拿到它 */
+    // ==================== 通用对话客户端（含 Harness + Skills） ====================
+    /**
+     * 通用对话客户端（默认人格「小夏」）+ 完整 Harness 管控链 + 默认 Skills。
+     * <p>按类型注入 ChatClient 时默认拿到它（由 {@code @Primary} 保证）。</p>
+     */
     @Bean
     @Primary
-    public ChatClient chatClient(OpenAiChatModel model) {
-        return ChatClient.builder(model)
+    public ChatClient chatClient(ChatModel chatModel,
+                                 InputGuardAdvisor inputGuard,
+                                 BudgetAdvisor budgetAdvisor,
+                                 AuditLogAdvisor auditLogAdvisor) {
+        return ChatClient.builder(chatModel)
                 .defaultSystem("""
-                            你的名字是小夏
+                        你的名字是小夏
                         """)
+                // 注入默认 Skills：模型会自动发现并按需加载 SKILL.md
+                .defaultTools(
+                        SkillsTool.builder()
+                                .addSkillsDirectory("classpath:.claude/skills")
+                                .build()
+                )
+                // Harness 管控链（按 order 顺序执行）
+                .defaultAdvisors(
+                        inputGuard,
+                        budgetAdvisor,
+                        auditLogAdvisor
+                )
                 .build();
     }
 
-    /** 机器翻译专用客户端（系统提示词与通用客户端隔离，互不影响） */
+    // ==================== 翻译专用客户端（仅 Harness 管控，不含 Skills） ====================
+    /**
+     * 机器翻译专用客户端。
+     * <p>与通用客户端隔离系统提示词；同样受 Harness 管控（预算 / 审计），
+     * 但不挂载 Skills —— 翻译是确定性任务，无需技能发现。</p>
+     * <p>若翻译场景也不希望走敏感词过滤，可以把 inputGuard 参数去掉。</p>
+     */
     @Bean
-    public ChatClient translateChatClient(OpenAiChatModel model) {
-        return ChatClient.builder(model)
+    public ChatClient translateChatClient(ChatModel chatModel,
+                                          BudgetAdvisor budgetAdvisor,
+                                          AuditLogAdvisor auditLogAdvisor) {
+        return ChatClient.builder(chatModel)
                 .defaultSystem(translateSystemPrompt())
+                .defaultAdvisors(
+                        budgetAdvisor,
+                        auditLogAdvisor
+                )
                 .build();
     }
 
-    /** 当前的翻译系统提示词（术语条数上限来自 app.translate.auto-glossary-max-terms） */
     public String translateSystemPrompt() {
         return TRANSLATE_SYSTEM_PROMPT_TEMPLATE.formatted(
                 TERMS_MARKER, properties.autoGlossaryMaxTerms(), TERMS_MARKER);

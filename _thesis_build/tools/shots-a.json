@@ -1,0 +1,33 @@
+{
+ "port": 9222,
+ "reportPath": "C:\\codeDev\\56\\app\\_shots\\report-a.json",
+ "shots": [
+  { "url": "http://localhost:5273/#/login", "out": "C:\\codeDev\\56\\app\\_shots\\a-01-login.png", "width": 1440, "height": 900, "waitMs": 3000,
+    "steps": [
+      { "eval": "localStorage.clear(); return true;", "waitMs": 500 },
+      { "navigate": "http://localhost:5273/#/login", "waitMs": 4000 }
+    ] },
+  { "url": "http://localhost:5273/#/login", "out": "C:\\codeDev\\56\\app\\_shots\\a-02-dashboard.png", "width": 1440, "height": 900, "waitMs": 4000,
+    "steps": [
+      { "eval": "const ins=document.querySelectorAll('input'); if(ins.length<2) return 'no-inputs'; ins[0].value='cgzmdr@foxmail.com'; ins[0].dispatchEvent(new Event('input',{bubbles:true})); ins[1].value='Cz12345@'; ins[1].dispatchEvent(new Event('input',{bubbles:true})); return ins.length;", "waitMs": 800 },
+      { "eval": "const b=[...document.querySelectorAll('button')].find(x=>x.innerText.includes('登')); if(b) b.click(); return !!b;", "waitMs": 6500 }
+    ],
+    "probes": { "hash": "return location.hash;", "token": "return (localStorage.getItem('satoken')||'').slice(0,12);" } },
+  { "url": "http://localhost:5273/#/ethnic", "out": "C:\\codeDev\\56\\app\\_shots\\a-03-ethnic.png", "width": 1440, "height": 900, "waitMs": 5000, "evalWait": "document.body.innerText.includes('民族管理')" },
+  { "url": "http://localhost:5273/#/festival", "out": "C:\\codeDev\\56\\app\\_shots\\a-04-festival.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/art", "out": "C:\\codeDev\\56\\app\\_shots\\a-05-art.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/person", "out": "C:\\codeDev\\56\\app\\_shots\\a-06-person.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/area", "out": "C:\\codeDev\\56\\app\\_shots\\a-07-area.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/sport", "out": "C:\\codeDev\\56\\app\\_shots\\a-08-sport.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/topic", "out": "C:\\codeDev\\56\\app\\_shots\\a-09-topic.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/todo", "out": "C:\\codeDev\\56\\app\\_shots\\a-10-todo.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/modeler", "out": "C:\\codeDev\\56\\app\\_shots\\a-11-modeler.png", "width": 1440, "height": 900, "waitMs": 7000 },
+  { "url": "http://localhost:5273/#/search-index", "out": "C:\\codeDev\\56\\app\\_shots\\a-12-searchindex.png", "width": 1440, "height": 900, "waitMs": 6000 },
+  { "url": "http://localhost:5273/#/translate", "out": "C:\\codeDev\\56\\app\\_shots\\a-13-translate.png", "width": 1440, "height": 900, "waitMs": 6000 },
+  { "url": "http://localhost:5273/#/user", "out": "C:\\codeDev\\56\\app\\_shots\\a-14-user.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/role", "out": "C:\\codeDev\\56\\app\\_shots\\a-15-role.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/credit", "out": "C:\\codeDev\\56\\app\\_shots\\a-16-credit.png", "width": 1440, "height": 900, "waitMs": 6000 },
+  { "url": "http://localhost:5273/#/source", "out": "C:\\codeDev\\56\\app\\_shots\\a-17-source.png", "width": 1440, "height": 900, "waitMs": 5000 },
+  { "url": "http://localhost:5273/#/discussion", "out": "C:\\codeDev\\56\\app\\_shots\\a-18-discussion.png", "width": 1440, "height": 900, "waitMs": 5000 }
+ ]
+}

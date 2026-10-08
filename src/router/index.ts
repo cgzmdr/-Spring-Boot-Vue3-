@@ -1,17 +1,21 @@
-import { createRouter, createWebHashHistory } from "vue-router";
+import { createRouter, createWebHistory, createMemoryHistory } from "vue-router";
+import type { Router, RouteRecordRaw } from "vue-router";
 
-const router = createRouter({
-	history: createWebHashHistory(),
-	scrollBehavior(to, _from, savedPosition) {
-		if (savedPosition) return savedPosition;
-		// Tab 锚点（如民族详情 #history / #customs）并非真实 DOM 元素，
-		// 由页面自身切换到对应 Tab；此时回到顶部，避免无效选择器告警。
-		if (to.hash && document.querySelector(to.hash)) {
-			return { el: to.hash, behavior: "smooth", top: 120 };
-		}
-		return { top: 0 };
-	},
-	routes: [
+/**
+ * History 路由（而非 hash）。
+ *
+ * 为什么从 hash 换过来：
+ * · hash 模式（`/#/ethnic`）下，`#` 之后的内容**不会发给服务器**，
+ *   服务端永远只看到 `/`，无法针对具体页面做 SSR / 预渲染；
+ * · 搜索引擎也只会收录一个 URL，子页面等于不存在；
+ * · 换成 History 后每个页面有真实路径（`/ethnic`、`/about`），
+ *   才能既做首屏直出，又让 SEO 逐个收录。
+ *
+ * 代价：需要 nginx 加 `try_files $uri $uri/ /index.html` 兜底，
+ * 否则刷新子页面会 404（见 docs/performance-3g.md）。
+ */
+
+const routes: RouteRecordRaw[] = [
 		{
 			path: "/",
 			name: "home",
@@ -205,20 +209,64 @@ const router = createRouter({
 			component: () => import("@/pages/about/index.vue"),
 			meta: { title: "关于" },
 		},
-		{
-			path: "/:pathMatch(.*)*",
-			name: "not-found",
-			component: () => import("@/pages/error/404.vue"),
-			meta: { title: "404" },
+	{
+		path: "/:pathMatch(.*)*",
+		name: "not-found",
+		component: () => import("@/pages/error/404.vue"),
+		meta: { title: "404" },
+	},
+];
+
+/**
+ * 每个请求都要一个**全新的** router 实例。
+ *
+ * SSR / 预渲染时若复用同一个实例，路由状态会在请求之间串味
+ * （上一个 URL 残留、导航守卫重复注册）。客户端则只创建一次。
+ *
+ * history 实现必须按环境区分：`createWebHistory` 在创建时就会读取
+ * `window.location` / `window.history`，在 Node 里直接抛
+ * `window is not defined`；服务端要用 `createMemoryHistory`
+ * （它把当前地址保存在内存里，正是预渲染「访问某个 URL」所需）。
+ */
+export function createAppRouter(): Router {
+	const router = createRouter({
+		history:
+			typeof window !== "undefined"
+				? createWebHistory(import.meta.env.BASE_URL)
+				: createMemoryHistory(import.meta.env.BASE_URL),
+		scrollBehavior(to, _from, savedPosition) {
+			if (savedPosition) return savedPosition;
+			if (!to.hash || typeof document === "undefined") return { top: 0 };
+
+			/*
+			 * 只是校验「这个锚点在页面上存不存在」，存在才滚动过去。
+			 *
+			 * 必须 try/catch：换成 History 路由后，`#` 仍是合法的 URL 片段，
+			 * 但不再是路由载体，历史遗留的 `/#/ethnic` 这类链接会走到这里。
+			 * `document.querySelector("#/ethnic")` 是**非法选择器**，
+			 * 会直接抛 SyntaxError 并中断整个导航 —— 页面因此卡住不渲染。
+			 * 另外 `#` 后也可能是不符合 CSS 标识符规则的字符（如数字开头）。
+			 */
+			let el: Element | null = null;
+			try {
+				el = document.querySelector(to.hash);
+			} catch {
+				el = null;
+			}
+			return el ? { el: to.hash, behavior: "smooth", top: 120 } : { top: 0 };
 		},
-	],
-});
+		routes,
+	});
 
-router.afterEach((to) => {
-	const title = (to.meta.title as string) || "";
-	document.title = title
-		? `${title} · 走进多彩 56 个民族世界`
-		: "走进多彩 56 个民族世界";
-});
+	router.afterEach((to) => {
+		if (typeof document === "undefined") return;
+		const title = (to.meta.title as string) || "";
+		document.title = title
+			? `${title} · 走进多彩 56 个民族世界`
+			: "走进多彩 56 个民族世界";
+	});
 
-export default router;
+	return router;
+}
+
+export default createAppRouter;

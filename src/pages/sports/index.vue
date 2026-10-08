@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import PageHead from "@/components/PageHead.vue";
 import { traditionalSportApi } from "@/api/modules";
 import type { TraditionalSport, TraditionalSportDirectory } from "@/api/types";
 import { useLangStore } from "@/stores/lang";
+
+const router = useRouter();
 
 /**
  * 传统体育（B-5）
@@ -97,7 +100,8 @@ function toggle(name: string) {
 }
 
 function gotoEthnic(slug: string) {
-	window.location.hash = `#/search?q=${encodeURIComponent(slug)}`;
+	// History 路由：用 router.push，不要再写 window.location.hash
+	router.push({ path: "/search", query: { q: slug } });
 }
 </script>
 

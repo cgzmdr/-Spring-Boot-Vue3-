@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive, onBeforeUnmount, nextTick } from "vue";
+import { ref, reactive } from "vue";
 import { ElMessage } from "element-plus";
 import { useAuthStore } from "@/stores/auth";
 import type { FormInstance, FormRules } from "element-plus";
@@ -12,14 +12,17 @@ const mode = ref<"login" | "register">("login");
 const form = ref({ account: "", nickname: "", password: "" });
 const loading = ref(false);
 
+/**
+ * 打开弹窗。
+ *
+ * 该组件现在是异步按需加载的（见 AppMasthead.vue），
+ * 因此「auth:required」事件的监听放在父组件里——组件没挂载时
+ * 自己是收不到事件的。这里只负责打开。
+ */
 function open() {
 	visible.value = true;
 	mode.value = "login";
 	form.value = { account: "", nickname: "", password: "" };
-}
-
-function onAuthRequired() {
-	open();
 }
 
 function switchMode(m: "login" | "register") {
@@ -60,13 +63,7 @@ async function submit() {
 	}
 }
 
-onMounted(() => window.addEventListener("auth:required", onAuthRequired));
-onBeforeUnmount(() =>
-	window.removeEventListener("auth:required", onAuthRequired),
-);
-
 defineExpose({ open });
-void nextTick;
 
 const validatePass = (_rule: any, value: any, callback: any) => {
 	const strongPasswordRegex =

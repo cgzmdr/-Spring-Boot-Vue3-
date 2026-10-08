@@ -1,0 +1,7 @@
+{
+ "port": 9222,
+ "reportPath": "C:\\codeDev\\56\\app\\_shots\\report-test.json",
+ "shots": [
+  { "url": "http://localhost:5173/", "out": "C:\\codeDev\\56\\app\\_shots\\t-home.png", "width": 1600, "height": 950, "fullPage": true, "waitMs": 4000, "maxHeight": 4000 }
+ ]
+}

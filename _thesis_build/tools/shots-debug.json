@@ -1,0 +1,17 @@
+{
+ "port": 9222,
+ "reportPath": "C:\\codeDev\\56\\app\\_shots\\report-debug.json",
+ "shots": [
+  { "url": "http://localhost:5273/#/login", "out": "C:\\codeDev\\56\\app\\_shots\\dbg-login.png", "width": 1440, "height": 900, "waitMs": 3500,
+    "steps": [
+      { "eval": "const ins=document.querySelectorAll('input'); ins[0].value='cgzmdr@foxmail.com'; ins[0].dispatchEvent(new Event('input',{bubbles:true})); ins[1].value='Cz12345@'; ins[1].dispatchEvent(new Event('input',{bubbles:true})); return ins.length;", "waitMs": 800 },
+      { "eval": "const b=[...document.querySelectorAll('button')].find(x=>x.innerText.includes('登')); if(b) b.click(); return !!b;", "waitMs": 6000 }
+    ],
+    "probes": {
+      "inputs": "const ins=[...document.querySelectorAll('input')]; return ins.map(i=>({type:i.type, val:i.value, ph:i.placeholder}));",
+      "storage": "const o={}; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); o[k]=(localStorage.getItem(k)||'').slice(0,60);} return o;",
+      "hash": "return location.hash;",
+      "msgs": "return [...document.querySelectorAll('.el-message, .el-message__content, .el-form-item__error')].map(e=>e.innerText);"
+    } }
+ ]
+}

@@ -20,12 +20,24 @@ export const FONT_SIZE_OPTIONS: FontSizeOption[] = [
 ];
 
 export const useSettingsStore = defineStore("settings", () => {
+	/**
+	 * 读取持久化字号。
+	 *
+	 * SSR / 预渲染阶段没有 localStorage，必须在取值前判环境，
+	 * 否则 store 一被实例化就抛 ReferenceError（整页预渲染失败）。
+	 * 服务端一律回退到 "normal"：字体缩放是纯客户端偏好，
+	 * 不该影响首屏直出的 HTML，也不会造成 hydration 不一致，
+	 * 因为它只改 documentElement.style，不参与模板渲染。
+	 */
 	const fontSize = ref<FontSize>(
-		(localStorage.getItem(STORAGE_KEY) as FontSize) || "normal",
+		(typeof localStorage !== "undefined"
+			? (localStorage.getItem(STORAGE_KEY) as FontSize)
+			: null) || "normal",
 	);
 
 	/** 将字号设置应用到页面（html zoom，等效整体缩放） */
 	function apply() {
+		if (typeof document === "undefined") return;
 		const opt =
 			FONT_SIZE_OPTIONS.find((o) => o.value === fontSize.value) ||
 			FONT_SIZE_OPTIONS[1];
@@ -35,7 +47,9 @@ export const useSettingsStore = defineStore("settings", () => {
 
 	function setFontSize(v: FontSize) {
 		fontSize.value = v;
-		localStorage.setItem(STORAGE_KEY, v);
+		if (typeof localStorage !== "undefined") {
+			localStorage.setItem(STORAGE_KEY, v);
+		}
 		apply();
 	}
 

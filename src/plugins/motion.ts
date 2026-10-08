@@ -15,7 +15,50 @@ import { autoAnimatePlugin } from "@formkit/auto-animate/vue";
  */
 const EASE_OUT: Easing = [0.22, 1, 0.36, 1];
 
+/**
+ * SSR（预渲染）阶段用的空指令。
+ *
+ * 为什么不能「干脆不注册」：Vue 的 SSR 渲染器遇到模板里出现、
+ * 但服务端未注册的自定义指令时，会去读 `directive.getSSRProps`，
+ * 而 directive 是 undefined —— 直接抛
+ * `TypeError: Cannot read properties of undefined (reading 'getSSRProps')`，
+ * 整页预渲染失败。
+ *
+ * 为什么也不注册真实的 MotionPlugin：它依赖 IntersectionObserver / window，
+ * Node 里没有；而且入场动效的初始态是 `opacity: 0`，
+ * 若真渲染进 HTML，预渲染页面会以「全透明」直出 ——
+ * 用户在 JS 迟迟不执行时会看到一片空白，比不做预渲染还糟。
+ *
+ * 所以这里提供「无 getSSRProps 的空指令」：元素以最终可见态直出，
+ * 客户端接管后再由真实指令播动画。
+ */
+const ssrNoopDirective = {};
+
+const SSR_DIRECTIVES: Record<string, object> = {
+	"motion": ssrNoopDirective,
+	"motion-fade-up": ssrNoopDirective,
+	"motion-fade-in": ssrNoopDirective,
+	"motion-from-left": ssrNoopDirective,
+	"motion-from-right": ssrNoopDirective,
+	"motion-pop-in": ssrNoopDirective,
+	// v-auto-animate：列表增删补间，服务端无意义
+	"auto-animate": ssrNoopDirective,
+};
+
+/**
+ * 注册全站动效。
+ *
+ * 浏览器端挂真实的 MotionPlugin / autoAnimate；
+ * 服务端只注册上面的空指令，保证预渲染能顺利产出「可见」的内容。
+ */
 export function setupMotion(app: App) {
+	if (typeof window === "undefined") {
+		for (const [name, dir] of Object.entries(SSR_DIRECTIVES)) {
+			app.directive(name, dir);
+		}
+		return;
+	}
+
 	app.use(MotionPlugin, {
 		directives: {
 			/** 上浮淡入（滚动进入视口一次） */

@@ -1,0 +1,94 @@
+﻿{
+    "port":  9222,
+    "reportPath":  "C:\\codeDev\\56\\app\\_figs\\report.json",
+    "shots":  [
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig3-1-usecase-user.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig3-1-usecase-user.png",
+                      "width":  1160,
+                      "height":  620,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig3-2-usecase-admin.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig3-2-usecase-admin.png",
+                      "width":  1160,
+                      "height":  660,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-1-arch.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-1-arch.png",
+                      "width":  1120,
+                      "height":  700,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-2-func-tree.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-2-func-tree.png",
+                      "width":  1180,
+                      "height":  760,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-3-dev-flow.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-3-dev-flow.png",
+                      "width":  940,
+                      "height":  960,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-4-login-flow.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-4-login-flow.png",
+                      "width":  940,
+                      "height":  752,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-5-operate-flow.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-5-operate-flow.png",
+                      "width":  940,
+                      "height":  834,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-6-add-flow.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-6-add-flow.png",
+                      "width":  940,
+                      "height":  714,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-7-update-flow.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-7-update-flow.png",
+                      "width":  940,
+                      "height":  834,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-8-delete-flow.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-8-delete-flow.png",
+                      "width":  940,
+                      "height":  834,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  },
+                  {
+                      "url":  "file:///C:/codeDev/56/app/_thesis_build/figures/fig4-9-er.html",
+                      "out":  "C:\\codeDev\\56\\app\\_figs\\fig4-9-er.png",
+                      "width":  1180,
+                      "height":  780,
+                      "waitMs":  900,
+                      "fullPage":  false
+                  }
+              ]
+}

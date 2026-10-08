@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useReducedMotion } from "@vueuse/motion";
 import type { MotionVariants } from "@vueuse/motion";
 import { fadeUp, slideIn, popIn } from "@/utils/motion";
@@ -39,8 +39,14 @@ const props = withDefaults(
 	},
 );
 
-/** 系统「减少动态效果」偏好：开启时直接显示终态，不做位移 */
-const reduced = useReducedMotion();
+/**
+ * 系统「减少动态效果」偏好：开启时直接显示终态，不做位移。
+ *
+ * 该偏好需要 matchMedia，SSR / 预渲染阶段没有；此时按「不减少动效」处理，
+ * 但因为服务端根本不注册 v-motion（见 plugins/motion.ts），
+ * 直出的是最终可见态，不会出现隐藏问题。
+ */
+const reduced = typeof window !== "undefined" ? useReducedMotion() : ref(false);
 
 const variants = computed<MotionVariants<string>>(() => {
 	const opts = { delay: props.delay, duration: props.duration, distance: props.y };

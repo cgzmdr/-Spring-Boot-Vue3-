@@ -92,13 +92,24 @@ const provincePaths = computed(() =>
 	})),
 );
 
+/**
+ * 省级轮廓数据：**只在组件挂载时**才请求。
+ *
+ * 该组件由「分布地图」视图按需渲染，因此这份 145 KB 的 GeoJSON
+ * 不会进入首屏：用户在卡片墙浏览时完全不下载
+ * （见 scripts/check-map-lazy-fetch.mjs 的运行时验证）。
+ */
+async function fetchProvinces(): Promise<GeoFeature[]> {
+	// 静态资源：public/data/china-provinces.json（已抽稀，约 145KB）
+	const res = await fetch("/data/china-provinces.json");
+	if (!res.ok) throw new Error(String(res.status));
+	const gj = (await res.json()) as { features: GeoFeature[] };
+	return gj.features || [];
+}
+
 onMounted(async () => {
 	try {
-		// 静态资源：public/data/china-provinces.json（已抽稀，约 145KB）
-		const res = await fetch("/data/china-provinces.json");
-		if (!res.ok) throw new Error(String(res.status));
-		const gj = (await res.json()) as { features: GeoFeature[] };
-		provinces.value = gj.features || [];
+		provinces.value = await fetchProvinces();
 	} catch {
 		mapError.value = true;
 	} finally {

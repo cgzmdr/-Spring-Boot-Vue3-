@@ -22,10 +22,8 @@ ext {
     set('saTokenVersion',"1.45.0")
     set('easyQueryVersion', "3.2.1")
     springAiVersion = "2.0.1"
-    // Camunda 7 嵌入式流程引擎（7.24.x 是官方支持 Spring Boot 4.0.x 的版本，
-    // 见 https://docs.camunda.org/manual/7.24/user-guide/spring-boot-integration/version-compatibility/）。
-    // 引擎跑在应用同一 JVM 内、复用业务 PostgreSQL 库，生产无需独立 Zeebe broker/gateway/ES。
     set('camundaVersion', "7.24.0")
+    springAiAgentUtilsVersion = "0.7.0"
 }
 
 configurations {
@@ -36,22 +34,7 @@ configurations {
 }
 
 dependencies {
-    // ==========================================================================
-    // 工作流：Camunda 7 嵌入式流程引擎
-    //
-    // 相比原先的 Camunda 8（Zeebe broker + gateway + Elasticsearch 二次存储的
-    // 独立集群 + 瘦客户端），Camunda 7 直接以库的形式跑在本应用 JVM 内：
-    //   · 无需单独部署/运维 Zeebe 集群与 Elasticsearch；
-    //   · 引擎表建在业务同一个 PostgreSQL 库里，事务与业务数据一致；
-    //   · 用户任务/流程实例查询是本地 SQL，没有「二次存储延迟」，因此原先为
-    //     规避该延迟而写的对账轮询逻辑可以大幅简化。
-    //
-    // 只引 core starter（不含 starter-webapp）：后台 UI 由本项目 admin 前端自建，
-    // 不需要 Camunda 自带的 Cockpit/Tasklist/Admin webapp，避免引入额外的
-    // Spring Security 过滤器链与静态资源（会与 Sa-Token 鉴权冲突）。
-    // ==========================================================================
     implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter:${camundaVersion}") {
-        // Camunda 自带 webapp/rest 依赖会拉起另一套安全与 Servlet 配置，这里排除
         exclude group: 'org.camunda.bpm.springboot', module: 'camunda-bpm-spring-boot-starter-webapp'
         exclude group: 'org.camunda.bpm.springboot', module: 'camunda-bpm-spring-boot-starter-webapp-core'
         exclude group: 'org.camunda.bpm.springboot', module: 'camunda-bpm-spring-boot-starter-rest'
@@ -86,16 +69,10 @@ dependencies {
     implementation "cn.dev33:sa-token-spring-boot4-starter:${saTokenVersion}"
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2'
-
     implementation 'org.springframework.boot:spring-boot-starter-mail'
-
-    // 拼音检索（全文检索的「拼音/首字母」维度，方向 D-1）：
-    // pinyin4j 体积极小、无外部依赖、可离线运行，用于在建立搜索索引时
-    // 为中文标题生成「全拼」与「首字母缩写」两种形式（如 蒙古族 → mengguzu / mgz）。
     implementation 'com.belerweb:pinyin4j:2.5.1'
-
-    // Apifox Helper / Swagger 注解（仅编译期，用于生成 API 文档）
     compileOnly 'io.swagger.core.v3:swagger-annotations-jakarta:2.2.27'
+    implementation "org.springaicommunity:spring-ai-agent-utils:${springAiAgentUtilsVersion}"
 }
 
 dependencyManagement {
@@ -104,11 +81,6 @@ dependencyManagement {
     }
 }
 
-// ============================================================================
-// 静态资源外置：打包时不在 bootJar 中打入 static，而是复制到 jar 同级 static 目录。
-// 开发环境仍通过 processResources 输出到 build/resources/main，可正常访问。
-// 生产环境请将 build/libs/static 与 jar 放在同一目录（或通过 app.static-location 指定）。
-// ============================================================================
 tasks.register('copyStaticResources', Copy) {
     from('src/main/resources/static')
     into(layout.buildDirectory.dir('libs/static'))
@@ -116,22 +88,12 @@ tasks.register('copyStaticResources', Copy) {
 
 tasks.named('bootJar') {
     dependsOn 'copyStaticResources'
-    // bootJar 不打包 static，避免 jar 体积过大；生产静态资源由外部目录提供。
     exclude('static/**')
 }
 
-// plain jar 同样不打包 static，保持两种 jar 产物行为一致。
 tasks.named('jar') {
     exclude('static/**')
 }
-
-// ============================================================================
-// 历史沿革解析器校验（方向 C-2）
-//
-// 对真实 56 行数据跑断言（年份写法必须存在于原文、下标一致、时代按时间排序等）。
-// 先导出数据：psql -U postgres -h localhost -d 56_app -f scripts/export-ethnic-descriptions.sql
-// 然后：gradlew runHistoryCheck
-// ============================================================================
 tasks.register('runHistoryCheck', JavaExec) {
     group = 'verification'
     description = '对真实 56 行民族数据校验【历史沿革】结构化解析结果'
@@ -139,7 +101,6 @@ tasks.register('runHistoryCheck', JavaExec) {
     mainClass = 'com.czdr.work.HistoryParserCheck'
     args = ['scripts/ethnic-descriptions.tsv']
 }
-
 tasks.register('runHistoryReport', JavaExec) {
     group = 'verification'
     description = '输出 56 个民族的历史沿革结构化摘要（段落/时间轴/时代/锚定比例）'

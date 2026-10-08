@@ -19,17 +19,30 @@ let authNoticeScheduled = false;
 
 /** 触发全局"需要登录"事件（登录弹窗监听） */
 export function notifyLoginRequired() {
+	if (typeof window === "undefined") return;
 	if (authNoticeScheduled) return;
 	authNoticeScheduled = true;
 	window.dispatchEvent(new CustomEvent("auth:required"));
 	setTimeout(() => (authNoticeScheduled = false), 1500);
 }
 
-/** Token 存取 */
+/**
+ * Token 存取。
+ *
+ * SSR / 预渲染阶段没有 localStorage，所有读写都要先判环境——
+ * 这些方法会在拦截器里被调用，而拦截器在服务端渲染时也可能被触发。
+ */
 export const tokenStore = {
-	get: () => localStorage.getItem("cend_token") || "",
-	set: (t: string) => localStorage.setItem("cend_token", t),
-	clear: () => localStorage.removeItem("cend_token"),
+	get: () =>
+		(typeof localStorage !== "undefined"
+			? localStorage.getItem("cend_token")
+			: null) || "",
+	set: (t: string) => {
+		if (typeof localStorage !== "undefined") localStorage.setItem("cend_token", t);
+	},
+	clear: () => {
+		if (typeof localStorage !== "undefined") localStorage.removeItem("cend_token");
+	},
 };
 
 const request = axios.create({
